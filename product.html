@@ -6,6 +6,22 @@
   <title>Product — Safiery</title>
   <link rel="icon" type="image/png" href="assets/img/safiery-logo-2021.png">
   <link rel="stylesheet" href="assets/css/store.css?v=2">
+  <style>
+    /* Manuals & datasheets list (product detail page) */
+    .doc-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 10px; }
+    .doc-item { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid var(--line, #e3e6ea);
+      border-radius: 12px; text-decoration: none; color: inherit; background: #fff; transition: border-color .15s, box-shadow .15s, transform .15s; }
+    .doc-item:hover { border-color: var(--brand, #3E78BD); box-shadow: 0 4px 16px rgba(62,120,189,.10); transform: translateY(-1px); }
+    .doc-ico { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 9px;
+      background: rgba(62,120,189,.10); color: var(--brand, #3E78BD); }
+    .doc-ico svg { width: 22px; height: 22px; }
+    .doc-meta { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .doc-title { font-weight: 600; font-size: 15px; line-height: 1.3; }
+    .doc-sub { font-size: 12.5px; color: var(--grey, #8C9198); text-transform: uppercase; letter-spacing: .03em; }
+    .doc-dl { flex: none; font-weight: 600; font-size: 13.5px; color: var(--brand, #3E78BD); display: inline-flex; align-items: center; gap: 5px; }
+    .doc-note { margin-top: 16px; font-size: 13.5px; }
+    @media (max-width: 560px) { .doc-dl span.dl-label { display: none; } }
+  </style>
 </head>
 <body data-nav="shop.html">
   <header data-header></header>
@@ -58,6 +74,24 @@
         }).join("");
       }
 
+      var DOC_TYPE = { manual: "Manual", datasheet: "Datasheet", guide: "Quick guide", note: "Application note", presentation: "Technical overview" };
+      var DOC_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>';
+      var DL_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 21h14"/></svg>';
+      function docsPanel() {
+        if (!p.docs || !p.docs.length) {
+          return '<p class="muted">Product manuals and datasheets for this item are available on request — <a href="mailto:sales@safiery.com" style="color:var(--accent)">sales@safiery.com</a>. Trade accounts can access the full document library after login.</p>';
+        }
+        var items = p.docs.map(function (d) {
+          return '<li><a class="doc-item" href="assets/docs/' + d.file + '" target="_blank" rel="noopener" download>' +
+            '<span class="doc-ico">' + DOC_SVG + '</span>' +
+            '<span class="doc-meta"><span class="doc-title">' + Store.esc(d.title) + '</span>' +
+            '<span class="doc-sub">' + (DOC_TYPE[d.type] || "Document") + ' · PDF</span></span>' +
+            '<span class="doc-dl">' + DL_SVG + '<span class="dl-label">Download</span></span></a></li>';
+        }).join("");
+        return '<ul class="doc-list">' + items + '</ul>' +
+          '<p class="muted doc-note">More manuals and datasheets are available on request — <a href="mailto:sales@safiery.com" style="color:var(--accent)">sales@safiery.com</a>.</p>';
+      }
+
       function render() {
         var badges = (p.badges || []).map(function (b) { return '<span class="minibadge">' + Store.esc(b) + '</span>'; }).join("");
         var tradeBox = Store.isTrade() ? "" :
@@ -68,11 +102,11 @@
         // tab model (ARIA tablist)
         var tabs = [{ id: "desc", label: "Description" }];
         if (p.specs) tabs.push({ id: "spec", label: "Specification" });
-        tabs.push({ id: "manual", label: "Manual" }, { id: "video", label: "Video" });
+        tabs.push({ id: "manual", label: "Manuals & Datasheets" + (p.docs && p.docs.length ? " (" + p.docs.length + ")" : "") }, { id: "video", label: "Video" });
         var panelContent = {
           desc: '<p>' + Store.esc(p.desc || p.short || "") + '</p>' + (badges ? '<div class="pbadges" style="margin-top:8px">' + badges + '</div>' : ''),
           spec: p.specs ? '<table class="specs-table">' + specRows() + '</table>' : '',
-          manual: '<p class="muted">Product manuals and datasheets are available on request — <a href="mailto:sales@safiery.com" style="color:var(--accent)">sales@safiery.com</a>. Trade accounts can access the full document library after login.</p>',
+          manual: docsPanel(),
           video: '<p class="muted">New products are released first on the Safiery YouTube channel. Walkthrough and install videos for this product are published there.</p>'
         };
         var tabsBtns = tabs.map(function (t, i) {

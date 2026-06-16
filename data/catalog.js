@@ -423,6 +423,76 @@
       short: "Data SIM for remote monitoring of your Safiery / Victron system." }
   ];
 
+  // ---- Product documents (manuals / datasheets, mirrored from safiery.com) --
+  // PDFs live in assets/docs/. Defined once and shared so a doc is attached to
+  // every product it applies to without duplicating titles. `type` drives the
+  // sub-label shown under each download link on the product page.
+  var DOC = {
+    scottyManual:  { title: "Scotty 1500 & 3000 — Installation & Operation Manual (Oct 2025)", file: "scotty-ai-manual-2025.pdf",               type: "manual" },
+    scottyTrouble: { title: "Scotty AI — Troubleshooting via Smartphone",                       file: "scotty-ai-troubleshooting-smartphone.pdf", type: "guide" },
+    scottyEff:     { title: "Scotty AI — High-Efficiency DC-DC Technical Overview",             file: "scotty-high-efficiency-presentation.pdf",  type: "presentation" },
+    scottyBmg:     { title: "Scotty AI V3 & the Bidirectional Motor Generator",                 file: "scotty-ai-v3-and-bmg.pdf",                 type: "datasheet" },
+    starManual:    { title: "STAR Range — Operating Manual (V2.3)",                             file: "star-range-operating-manual.pdf",          type: "manual" },
+    starTankFuel:  { title: "StarTank Radar Fuel Sensor — Application Note",                    file: "startank-fuel-note.pdf",                   type: "note" },
+    victronCerbo:  { title: "Victron Cerbo GX — Manual (Rev 36)",                               file: "victron-cerbo-gx-manual.pdf",              type: "manual" },
+    victronMulti:  { title: "Victron MultiPlus-II / Quattro-II — Manual (Rev 11)",              file: "victron-multiplus-ii-quattro-ii-manual.pdf", type: "manual" }
+  };
+
+  // id -> documents. Products not listed simply have no published document yet.
+  var productDocs = {
+    // Scotty AI DC-DC (all V3)
+    "scotty-1500-ss": [DOC.scottyManual, DOC.scottyBmg, DOC.scottyEff, DOC.scottyTrouble],
+    "scotty-1500-v3": [DOC.scottyManual, DOC.scottyBmg, DOC.scottyEff, DOC.scottyTrouble],
+    "scotty-3kw-1248": [DOC.scottyManual, DOC.scottyBmg, DOC.scottyEff, DOC.scottyTrouble],
+    "scotty-3kw-2448": [DOC.scottyManual, DOC.scottyBmg, DOC.scottyEff, DOC.scottyTrouble],
+    "scotty-upgrade": [DOC.scottyManual],
+
+    // BMG kits that integrate a Scotty AI DC-DC
+    "bmg-j180-1500": [DOC.scottyBmg, DOC.scottyManual],
+    "bmg-j180-3000": [DOC.scottyBmg, DOC.scottyManual],
+    "bmg-volvo-1500": [DOC.scottyBmg, DOC.scottyManual],
+    "bmg-volvo-3000": [DOC.scottyBmg, DOC.scottyManual],
+    "bmg-sprinter-1500": [DOC.scottyBmg, DOC.scottyManual],
+    "bmg-sprinter-3000": [DOC.scottyBmg, DOC.scottyManual],
+    "bmg-pad-1500": [DOC.scottyBmg, DOC.scottyManual],
+    "bmg-pad-3000": [DOC.scottyBmg, DOC.scottyManual],
+    "bmg-isuzu-1500": [DOC.scottyBmg, DOC.scottyManual],
+    "bmg-isuzu-3000": [DOC.scottyBmg, DOC.scottyManual],
+    // bare alternators / mounts
+    "bmg-4804": [DOC.scottyBmg],
+    "bmg-4805": [DOC.scottyBmg],
+    "bmg-4801": [DOC.scottyBmg],
+
+    // STAR digital switching, keypads & radar sensors
+    "star-power": [DOC.starManual],
+    "star-rover-4": [DOC.starManual],
+    "star-light": [DOC.starManual],
+    "star-switch-custom": [DOC.starManual],
+    "star-tank-fuel": [DOC.starManual, DOC.starTankFuel],
+    "star-tank-water": [DOC.starManual],
+    "star-sp4": [DOC.starManual],
+    "star-sp4-12v": [DOC.starManual],
+    "star-quad": [DOC.starManual],
+    "star-icon-8": [DOC.starManual],
+    "star-sp8": [DOC.starManual],
+    "star-icon-12": [DOC.starManual],
+    "star-demo-system": [DOC.starManual, DOC.victronCerbo],
+
+    // Tank monitoring
+    "tank-mfd-kit": [DOC.starManual, DOC.starTankFuel],
+    "tank-gx-140": [DOC.victronCerbo],
+
+    // Jupiter packs (Victron MultiPlus-II / Quattro-II inverter inside)
+    "jupiter-a-nobatt": [DOC.victronMulti],
+    "jupiter-a-200ah": [DOC.victronMulti],
+    "jupiter-b-400ah": [DOC.victronMulti],
+    "jupiter-b-nobatt": [DOC.victronMulti],
+    "jupiter-c": [DOC.victronMulti],
+    "jupiter-d-nobatt": [DOC.victronMulti],
+    "jupiter-d-636ah": [DOC.victronMulti]
+  };
+  products.forEach(function (p) { if (productDocs[p.id]) p.docs = productDocs[p.id]; });
+
   var CATALOG = {
     currency: "AUD",
     gstRate: GST_RATE,
