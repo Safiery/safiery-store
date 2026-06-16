@@ -58,7 +58,7 @@
             src="assets/models/scotty-1500-v3.glb"
             poster="assets/img/scotty-poster.png"
             alt="Interactive 3D model of the Scotty AI 1500W V3 bi-directional DC-DC converter"
-            camera-controls touch-action="pan-y"
+            camera-controls disable-zoom touch-action="pan-y"
             auto-rotate auto-rotate-delay="500" rotation-per-second="20deg"
             interaction-prompt="none"
             shadow-intensity="0.85" shadow-softness="1"
@@ -248,7 +248,7 @@
       function mountViewer(m, glb, poster, alt) {
         m.innerHTML =
           '<model-viewer class="scotty-viewer" src="' + glb + '" poster="' + poster + '" alt="' + alt + '"' +
-          ' camera-controls touch-action="pan-y" auto-rotate auto-rotate-delay="500" rotation-per-second="18deg"' +
+          ' camera-controls disable-zoom touch-action="pan-y" auto-rotate auto-rotate-delay="500" rotation-per-second="18deg"' +
           ' interaction-prompt="none" shadow-intensity="0.85" shadow-softness="1" exposure="1.0"' +
           ' camera-orbit="40deg 78deg 105%" ar ar-modes="webxr scene-viewer quick-look">' +
           '<button slot="ar-button" class="ar-btn">View in your space</button></model-viewer>' +
