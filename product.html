@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Product — Safiery</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23f6a623' d='M13 2L3 14h7l-1 8 10-12h-7z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/css/store.css">
+</head>
+<body data-nav="shop.html">
+  <header data-header></header>
+
+  <main id="main" tabindex="-1"><div class="wrap">
+    <div class="breadcrumb" data-crumb></div>
+    <div data-pdp></div>
+
+    <section class="section" style="padding:50px 0 0" data-related-wrap hidden>
+      <div class="section-head"><div><span class="eyebrow">You might also need</span><h2>Related products</h2></div></div>
+      <div class="product-grid cols-3" data-grid data-related></div>
+    </section>
+  </div></main>
+
+  <footer data-footer></footer>
+
+  <script src="data/catalog.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script>
+    (function () {
+      var id = new URLSearchParams(location.search).get("id");
+      var p = Store.byId(id);
+      var root = document.querySelector("[data-pdp]");
+
+      if (!p) {
+        document.querySelector("[data-crumb]").innerHTML = '<a href="index.html">Home</a> / <a href="shop.html">Shop</a> / Not found';
+        root.innerHTML = '<div class="empty"><h2>Product not found</h2><p class="muted">That product isn\'t in the catalogue.</p><a class="btn btn-primary" href="shop.html">Back to shop</a></div>';
+        return;
+      }
+
+      var cat = Store.category((p.cats || [])[0]) || { id: "", name: "" };
+      document.title = p.name + " — Safiery";
+      document.querySelector("[data-crumb]").innerHTML =
+        '<a href="index.html">Home</a> / <a href="shop.html">Shop</a> / ' +
+        (cat.id ? '<a href="shop.html?cat=' + cat.id + '">' + Store.esc(cat.name) + '</a> / ' : '') + Store.esc(p.name);
+
+      function flags() {
+        var f = "";
+        var pr = Store.pricing(p);
+        if (pr.onSale) f += '<span class="flag sale">Sale</span>';
+        if (p.featured) f += '<span class="flag feat">Featured</span>';
+        f += '<span class="stock-led" style="position:static"><span class="led ' + p.stock + '"></span>' + (Store.STOCK_LABEL[p.stock] || "") + '</span>';
+        return f;
+      }
+
+      function specRows() {
+        if (!p.specs) return "";
+        return Object.keys(p.specs).map(function (k) {
+          return '<tr><td>' + Store.esc(k) + '</td><td>' + Store.esc(p.specs[k]) + '</td></tr>';
+        }).join("");
+      }
+
+      function render() {
+        var badges = (p.badges || []).map(function (b) { return '<span class="minibadge">' + Store.esc(b) + '</span>'; }).join("");
+        var tradeBox = Store.isTrade() ? "" :
+          '<div class="trade-cta-box">' + Store.icon("user") +
+          '<div style="flex:1"><strong>Trade or reseller?</strong> <span class="muted">Log in to see your tier price on this item.</span></div>' +
+          '<a class="btn btn-primary btn-sm" href="account.html">Log in</a></div>';
+
+        // tab model (ARIA tablist)
+        var tabs = [{ id: "desc", label: "Description" }];
+        if (p.specs) tabs.push({ id: "spec", label: "Specification" });
+        tabs.push({ id: "manual", label: "Manual" }, { id: "video", label: "Video" });
+        var panelContent = {
+          desc: '<p>' + Store.esc(p.desc || p.short || "") + '</p>' + (badges ? '<div class="pbadges" style="margin-top:8px">' + badges + '</div>' : ''),
+          spec: p.specs ? '<table class="specs-table">' + specRows() + '</table>' : '',
+          manual: '<p class="muted">Product manuals and datasheets are available on request — <a href="mailto:sales@safiery.com" style="color:var(--accent)">sales@safiery.com</a>. Trade accounts can access the full document library after login.</p>',
+          video: '<p class="muted">New products are released first on the Safiery YouTube channel. Walkthrough and install videos for this product are published there.</p>'
+        };
+        var tabsBtns = tabs.map(function (t, i) {
+          var on = i === 0;
+          return '<button class="tab' + (on ? ' active' : '') + '" role="tab" id="tab-' + t.id + '" aria-controls="panel-' + t.id + '" aria-selected="' + on + '" tabindex="' + (on ? '0' : '-1') + '" data-tab="' + t.id + '">' + t.label + '</button>';
+        }).join("");
+        var tabsPanels = tabs.map(function (t, i) {
+          var on = i === 0;
+          return '<div class="tab-panel' + (on ? ' active' : '') + '" role="tabpanel" id="panel-' + t.id + '" aria-labelledby="tab-' + t.id + '" tabindex="0"' + (on ? '' : ' hidden') + '>' + panelContent[t.id] + '</div>';
+        }).join("");
+
+        root.innerHTML =
+          '<div class="pdp">' +
+            '<div class="pdp-gallery"><div class="pdp-hero"><img src="' + Store.productArt(p) + '" alt="' + Store.esc(p.name) + '"></div></div>' +
+            '<div class="pdp-info">' +
+              '<span class="pcat">' + cat.name + ' · ' + (p.sku || "") + '</span>' +
+              '<h1>' + Store.esc(p.name) + '</h1>' +
+              '<div class="pdp-flags">' + flags() + '</div>' +
+              '<p class="muted" style="font-size:16px">' + Store.esc(p.short || "") + '</p>' +
+              '<div class="pdp-price">' + Store.priceHTML(p, { lg: true }) + '</div>' +
+              tradeBox +
+              '<div class="pdp-buy">' +
+                (p.variable
+                  ? '<button class="btn btn-primary btn-lg" data-quote>' + Store.icon("user") + ' Request a quote</button>'
+                  : '<div class="qty"><button data-q="-1" aria-label="Decrease quantity">−</button><input type="number" value="1" min="1" data-qty aria-label="Quantity"><button data-q="1" aria-label="Increase quantity">+</button></div>' +
+                    '<button class="btn btn-primary btn-lg" data-buy>' + Store.icon("cart") + ' Add to cart</button>') +
+              '</div>' +
+              (p.variable ? '<p class="notice warn">Price varies by model — the figure shown is the starting price. Final pricing is confirmed by sales before dispatch.</p>' : '') +
+              '<div class="tabs" role="tablist" aria-label="Product details">' + tabsBtns + '</div>' +
+              tabsPanels +
+            '</div>' +
+          '</div>';
+
+        // qty steppers + buy / quote
+        var qtyInput = root.querySelector("[data-qty]");
+        if (qtyInput) {
+          root.querySelectorAll("[data-q]").forEach(function (b) {
+            b.addEventListener("click", function () {
+              qtyInput.value = Math.max(1, (parseInt(qtyInput.value, 10) || 1) + parseInt(b.getAttribute("data-q"), 10));
+            });
+          });
+        }
+        var buyBtn = root.querySelector("[data-buy]");
+        if (buyBtn) buyBtn.addEventListener("click", function () { Store.addToCart(p.id, Math.max(1, parseInt(qtyInput.value, 10) || 1)); });
+        var quoteBtn = root.querySelector("[data-quote]");
+        if (quoteBtn) quoteBtn.addEventListener("click", function () { Store.toast("Quote request noted — sales will confirm pricing & lead time"); });
+
+        // ARIA tabs with arrow-key navigation
+        var tabEls = Array.prototype.slice.call(root.querySelectorAll(".tab"));
+        function activate(tab, focus) {
+          tabEls.forEach(function (t) {
+            var sel = t === tab;
+            t.classList.toggle("active", sel);
+            t.setAttribute("aria-selected", sel);
+            t.tabIndex = sel ? 0 : -1;
+            var panel = root.querySelector("#panel-" + t.getAttribute("data-tab"));
+            if (panel) { panel.classList.toggle("active", sel); panel.hidden = !sel; }
+          });
+          if (focus && tab) tab.focus();
+        }
+        tabEls.forEach(function (tab, i) {
+          tab.addEventListener("click", function () { activate(tab); });
+          tab.addEventListener("keydown", function (e) {
+            if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); activate(tabEls[(i + 1) % tabEls.length], true); }
+            else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); activate(tabEls[(i - 1 + tabEls.length) % tabEls.length], true); }
+            else if (e.key === "Home") { e.preventDefault(); activate(tabEls[0], true); }
+            else if (e.key === "End") { e.preventDefault(); activate(tabEls[tabEls.length - 1], true); }
+          });
+        });
+      }
+      window.__pageRerender = render; // refresh price + trade box on login/logout
+
+      // related: same primary category, exclude self, up to 6
+      var related = Store.productsIn(p.cats[0]).filter(function (x) { return x.id !== p.id; }).slice(0, 6);
+      if (related.length) {
+        document.querySelector("[data-related-wrap]").hidden = false;
+        var rel = document.querySelector("[data-related]"); rel._list = related;
+        Store.renderGrid(rel, related);
+      }
+
+      render();
+    })();
+  </script>
+</body>
+</html>

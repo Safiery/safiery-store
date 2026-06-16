@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cart — Safiery</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23f6a623' d='M13 2L3 14h7l-1 8 10-12h-7z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/css/store.css">
+</head>
+<body data-nav="cart.html">
+  <header data-header></header>
+
+  <main id="main" tabindex="-1"><div class="wrap">
+    <div class="breadcrumb"><a href="index.html">Home</a> / Cart</div>
+    <div class="section-head" style="margin:18px 0 20px"><div><span class="eyebrow">Your order</span><h2>Shopping cart</h2></div></div>
+
+    <div data-trade-banner></div>
+    <div data-cart></div>
+  </div></main>
+
+  <footer data-footer></footer>
+
+  <script src="data/catalog.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script>
+    (function () {
+      var root = document.querySelector("[data-cart]");
+      var bannerEl = document.querySelector("[data-trade-banner]");
+
+      function banner() {
+        var t = Store.tier();
+        if (t) {
+          var s = Store.getSession();
+          bannerEl.innerHTML = '<div class="trade-banner" style="margin-bottom:24px">' +
+            Store.icon("shield") +
+            '<div style="flex:1"><strong>Trade pricing active</strong> <span class="muted">— ' + Store.esc(s.company || s.email) + '</span></div>' +
+            '<span class="tier-chip">' + t.name + ' · −' + Math.round(t.discount * 100) + '%</span></div>';
+        } else {
+          bannerEl.innerHTML = '<div class="notice" style="margin-bottom:24px; display:flex; gap:14px; align-items:center; flex-wrap:wrap">' +
+            Store.icon("user") + '<span style="flex:1">Reseller or installer? <a href="account.html" style="color:var(--accent)">Log in</a> to apply your trade discount to this cart.</span></div>';
+        }
+      }
+
+      function line(it) {
+        var p = it.product, pr = it.pricing;
+        var unit = pr.isTrade
+          ? '<span class="mono b2b" style="color:var(--cyan)">' + Store.formatAUD(pr.effective) + '</span> <span class="mono" style="color:var(--text-mut);text-decoration:line-through;font-size:12px">' + Store.formatAUD(pr.base) + '</span>'
+          : '<span class="mono">' + Store.formatAUD(pr.effective) + '</span>';
+        return '<div class="cart-line" data-id="' + p.id + '">' +
+          '<a class="thumb" href="product.html?id=' + p.id + '"><img src="' + Store.productArt(p) + '" alt=""></a>' +
+          '<div><h4><a href="product.html?id=' + p.id + '">' + Store.esc(p.name) + '</a></h4>' +
+            '<div class="ln-mini">' + (p.sku || "") + ' · ' + unit + ' ea (ex GST)</div>' +
+            '<div class="qty sm" style="margin-top:10px"><button data-dec aria-label="Decrease quantity">−</button><input type="number" value="' + it.qty + '" min="1" data-qtyin aria-label="Quantity"><button data-inc aria-label="Increase quantity">+</button></div>' +
+          '</div>' +
+          '<div class="ln-right">' +
+            '<span class="mono" style="font-size:17px">' + Store.formatAUD(Store.round2(pr.effective * it.qty)) + '</span>' +
+            '<button class="link-remove" data-remove>Remove</button>' +
+          '</div></div>';
+      }
+
+      function render() {
+        banner();
+        var items = Store.cartItems();
+        if (!items.length) {
+          root.innerHTML = '<div class="empty">' + Store.icon("cart") +
+            '<h2>Your cart is empty</h2><p class="muted">Add some power to your build.</p>' +
+            '<a class="btn btn-primary btn-lg" href="shop.html" style="margin-top:16px">Browse the range</a></div>';
+          return;
+        }
+        var t = Store.cartTotals();
+        root.innerHTML =
+          '<div class="cart-layout">' +
+            '<div data-lines>' + items.map(line).join("") + '</div>' +
+            '<aside class="summary">' +
+              '<h3>Order summary</h3>' +
+              (t.trade ? '<div class="sum-row">Retail subtotal <span class="v" style="text-decoration:line-through;color:var(--text-mut)">' + Store.formatAUD(t.subtotalRetail) + '</span></div>' : '') +
+              '<div class="sum-row">Subtotal (ex GST) <span class="v">' + Store.formatAUD(t.subtotal) + '</span></div>' +
+              (t.saving > 0 ? '<div class="sum-row save">Trade saving <span class="v">−' + Store.formatAUD(t.saving) + '</span></div>' : '') +
+              '<div class="sum-row">GST (10%) <span class="v">' + Store.formatAUD(t.gst) + '</span></div>' +
+              '<div class="sum-row">Freight <span class="v">Quoted by sales</span></div>' +
+              '<div class="sum-total"><span class="lbl">Total (inc GST)</span><span class="v">' + Store.formatAUD(t.total) + '</span></div>' +
+              '<button class="btn btn-primary btn-block btn-lg" style="margin-top:18px" data-checkout>' + Store.icon("bolt") + ' Secure checkout</button>' +
+              (t.trade
+                ? '<button class="btn btn-ghost btn-block" style="margin-top:10px" data-quote>Convert to formal quote</button>'
+                : '') +
+              '<p class="mono" style="text-align:center;color:var(--text-mut);font-size:11px;margin-top:14px">🔒 100% secure checkout · Powered by Stripe</p>' +
+              '<div class="notice warn" data-checkout-note style="display:none;margin-top:12px;font-size:12.5px"></div>' +
+            '</aside>' +
+          '</div>';
+
+        // wire line controls
+        root.querySelectorAll(".cart-line").forEach(function (ln) {
+          var id = ln.getAttribute("data-id");
+          var input = ln.querySelector("[data-qtyin]");
+          ln.querySelector("[data-dec]").addEventListener("click", function () { Store.setQty(id, Math.max(0, (parseInt(input.value,10)||1) - 1)); render(); });
+          ln.querySelector("[data-inc]").addEventListener("click", function () { Store.setQty(id, (parseInt(input.value,10)||1) + 1); render(); });
+          input.addEventListener("change", function () { Store.setQty(id, Math.max(0, parseInt(input.value,10)||0)); render(); });
+          ln.querySelector("[data-remove]").addEventListener("click", function () { Store.removeFromCart(id); render(); });
+        });
+        root.querySelector("[data-checkout]").addEventListener("click", function () { Store.checkout(this); });
+        var q = root.querySelector("[data-quote]");
+        if (q) q.addEventListener("click", function () { Store.toast("Quote request sent to sales — they'll confirm freight & lead time"); });
+      }
+      window.__pageRerender = render;
+      render();
+    })();
+  </script>
+</body>
+</html>

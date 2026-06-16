@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shop — Safiery</title>
+  <meta name="description" content="Browse the full Safiery range: solid-state lithium, Scotty AI DC-DC, BMG alternators, STAR switching, tank monitoring, induction cooktops, hot water and Jupiter packs.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23f6a623' d='M13 2L3 14h7l-1 8 10-12h-7z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/css/store.css">
+</head>
+<body data-nav="shop.html">
+  <header data-header></header>
+
+  <main id="main" tabindex="-1"><div class="wrap">
+    <div class="breadcrumb"><a href="index.html">Home</a> / <span data-crumb>Shop</span></div>
+    <div class="section-head" style="margin:18px 0 6px">
+      <div><span class="eyebrow">Catalogue</span><h2 data-title>All products</h2><p data-blurb></p></div>
+    </div>
+
+    <div class="shop-layout">
+      <!-- FILTERS -->
+      <aside class="filters">
+        <div class="filter-block">
+          <h4>Categories</h4>
+          <div data-cat-filters></div>
+        </div>
+        <div class="filter-block">
+          <h4>Price (ex GST)</h4>
+          <div class="range-row">
+            <input class="field" type="number" placeholder="Min" data-min>
+            <span class="muted">–</span>
+            <input class="field" type="number" placeholder="Max" data-max>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="margin-top:10px;width:100%" data-apply-price>Apply</button>
+        </div>
+        <div class="filter-block">
+          <h4>Availability</h4>
+          <label class="filter-opt"><input type="checkbox" data-instock> In stock only</label>
+        </div>
+        <div class="filter-block">
+          <button class="btn btn-ghost btn-sm" style="width:100%" data-clear>Clear all filters</button>
+        </div>
+      </aside>
+
+      <!-- RESULTS -->
+      <section>
+        <div class="shop-toolbar">
+          <div class="search-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input class="field" type="search" placeholder="Search products, SKUs…" data-search>
+          </div>
+          <span class="count" data-count></span>
+          <select class="field" data-sort>
+            <option value="featured">Sort: Featured</option>
+            <option value="price-asc">Price: low → high</option>
+            <option value="price-desc">Price: high → low</option>
+            <option value="name">Name A–Z</option>
+          </select>
+        </div>
+        <div class="product-grid" data-grid data-results></div>
+      </section>
+    </div>
+  </div></main>
+
+  <footer data-footer></footer>
+
+  <script src="data/catalog.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script>
+    (function () {
+      var qs = new URLSearchParams(location.search);
+      var state = {
+        cats: qs.get("cat") ? [qs.get("cat")] : [],
+        min: null, max: null, instock: false,
+        q: (qs.get("q") || ""), sort: "featured"
+      };
+      var results = document.querySelector("[data-results]");
+      var allCats = Store.categories;
+
+      // build category checkboxes
+      document.querySelector("[data-cat-filters]").innerHTML = allCats.map(function (c) {
+        var checked = state.cats.indexOf(c.id) !== -1 ? " checked" : "";
+        return '<label class="filter-opt"><input type="checkbox" value="' + c.id + '"' + checked + ' data-catbox> ' +
+          c.name + '<span class="ct">' + Store.categoryCount(c.id) + '</span></label>';
+      }).join("");
+
+      // page title from single category deep-link
+      function updateHeading() {
+        var title = "All products", blurb = "The complete Safiery range — " + Store.catalog.products.length + " products across " + allCats.length + " categories.";
+        if (state.cats.length === 1) { var c = Store.category(state.cats[0]); if (c) { title = c.name; blurb = c.blurb; } }
+        else if (state.cats.length > 1) { title = state.cats.length + " categories"; blurb = ""; }
+        document.querySelector("[data-title]").textContent = title;
+        document.querySelector("[data-blurb]").textContent = blurb;
+        document.querySelector("[data-crumb]").textContent = title;
+        document.title = title + " — Safiery";
+      }
+
+      function apply() {
+        var list = Store.catalog.products.slice();
+        if (state.cats.length) list = list.filter(function (p) { return p.cats.some(function (c) { return state.cats.indexOf(c) !== -1; }); });
+        if (state.instock) list = list.filter(function (p) { return p.stock === "in_stock"; });
+        if (state.min != null) list = list.filter(function (p) { return p.price >= state.min; });
+        if (state.max != null) list = list.filter(function (p) { return p.price <= state.max; });
+        if (state.q) {
+          var q = state.q.toLowerCase();
+          list = list.filter(function (p) {
+            return (p.name + " " + (p.sku || "") + " " + (p.short || "") + " " + (p.badges || []).join(" ")).toLowerCase().indexOf(q) !== -1;
+          });
+        }
+        if (state.sort === "price-asc") list.sort(function (a, b) { return a.price - b.price; });
+        else if (state.sort === "price-desc") list.sort(function (a, b) { return b.price - a.price; });
+        else if (state.sort === "name") list.sort(function (a, b) { return a.name.localeCompare(b.name); });
+        else list.sort(function (a, b) { return (b.featured ? 1 : 0) - (a.featured ? 1 : 0); });
+
+        results._list = list;
+        Store.renderGrid(results, list);
+        document.querySelector("[data-count]").textContent = list.length + " product" + (list.length === 1 ? "" : "s");
+        updateHeading();
+      }
+      window.__pageRerender = apply; // keep prices fresh on trade login
+
+      // wire filters
+      document.querySelector("[data-cat-filters]").addEventListener("change", function () {
+        state.cats = Array.prototype.map.call(document.querySelectorAll("[data-catbox]:checked"), function (b) { return b.value; });
+        apply();
+      });
+      document.querySelector("[data-instock]").addEventListener("change", function (e) { state.instock = e.target.checked; apply(); });
+      document.querySelector("[data-apply-price]").addEventListener("click", function () {
+        var mn = document.querySelector("[data-min]").value, mx = document.querySelector("[data-max]").value;
+        state.min = mn === "" ? null : Number(mn); state.max = mx === "" ? null : Number(mx); apply();
+      });
+      var searchT;
+      document.querySelector("[data-search]").addEventListener("input", function (e) {
+        clearTimeout(searchT); var v = e.target.value; searchT = setTimeout(function () { state.q = v; apply(); }, 180);
+      });
+      document.querySelector("[data-search]").value = state.q;
+      document.querySelector("[data-sort]").addEventListener("change", function (e) { state.sort = e.target.value; apply(); });
+      document.querySelector("[data-clear]").addEventListener("click", function () {
+        state = { cats: [], min: null, max: null, instock: false, q: "", sort: "featured" };
+        document.querySelectorAll("[data-catbox]").forEach(function (b) { b.checked = false; });
+        document.querySelector("[data-instock]").checked = false;
+        document.querySelector("[data-min]").value = ""; document.querySelector("[data-max]").value = "";
+        document.querySelector("[data-search]").value = ""; document.querySelector("[data-sort]").value = "featured";
+        apply();
+      });
+
+      apply();
+    })();
+  </script>
+</body>
+</html>

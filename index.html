@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Safiery — Genset-Free Power for Land &amp; Water</title>
+  <meta name="description" content="Safiery solid-state lithium batteries, Scotty AI DC-DC, BMG alternators, STAR digital switching, tank monitoring and all-electric living. B2C &amp; trade pricing.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23f6a623' d='M13 2L3 14h7l-1 8 10-12h-7z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/css/store.css">
+</head>
+<body data-nav="shop.html">
+  <header data-header></header>
+
+  <main id="main" tabindex="-1">
+    <!-- HERO -->
+    <section class="hero"><div class="wrap"><div class="hero-grid">
+      <div>
+        <span class="eyebrow" data-reveal style="animation-delay:.05s">Marine · RV · Off-grid power systems</span>
+        <h1 data-reveal style="animation-delay:.12s">Adventure <span class="hl">without</span> a genset.</h1>
+        <p class="lede" data-reveal style="animation-delay:.2s">Solid-state lithium, AI-tuned DC-DC, bi-directional motor generators and Victron-native digital switching — engineered so you can live and travel anywhere, silently.</p>
+        <div class="hero-cta" data-reveal style="animation-delay:.28s">
+          <a class="btn btn-primary btn-lg" href="shop.html">Shop the range</a>
+          <a class="btn btn-ghost btn-lg" href="account.html">Trade login →</a>
+        </div>
+        <div class="hero-stats" data-reveal style="animation-delay:.36s">
+          <div class="hero-stat"><div class="n" data-stat-products>—</div><div class="l">Products</div></div>
+          <div class="hero-stat"><div class="n">10,000</div><div class="l">Cycle life</div></div>
+          <div class="hero-stat"><div class="n">5 yr</div><div class="l">Warranty</div></div>
+          <div class="hero-stat"><div class="n">VE.CAN</div><div class="l">Victron native</div></div>
+        </div>
+      </div>
+      <div class="hero-visual" data-reveal style="animation-delay:.24s" data-hero-art></div>
+    </div></div></section>
+
+    <!-- VALUE PROPS -->
+    <section class="section" style="padding-top:20px"><div class="wrap">
+      <div class="value-row" data-values></div>
+    </div></section>
+
+    <!-- CATEGORIES -->
+    <section class="section"><div class="wrap">
+      <div class="section-head">
+        <div><span class="eyebrow">The catalogue</span><h2>Shop by system</h2></div>
+        <a class="btn btn-ghost" href="shop.html">All products →</a>
+      </div>
+      <div class="cat-grid" data-cats></div>
+    </div></section>
+
+    <!-- TRADE CALLOUT -->
+    <section class="section" style="padding-top:0"><div class="wrap">
+      <div class="trade-banner" style="padding:30px 34px">
+        <div style="flex:1; min-width:260px">
+          <span class="eyebrow" style="color:var(--cyan)">For resellers &amp; installers</span>
+          <h2 style="font-size:30px; margin:10px 0 8px">Trade pricing, applied automatically.</h2>
+          <p class="muted" style="margin:0; max-width:60ch">Log in and your B2BKing tier discount (10–32%) is applied live across every product and your cart — no codes, no quotes for stock items. Need a formal quote? It's one click from the cart.</p>
+        </div>
+        <a class="btn btn-primary btn-lg" href="account.html">Access trade pricing</a>
+      </div>
+    </div></section>
+
+    <!-- FEATURED -->
+    <section class="section" style="padding-top:0"><div class="wrap">
+      <div class="section-head">
+        <div><span class="eyebrow">Best sellers</span><h2>Featured products</h2></div>
+        <a class="btn btn-ghost" href="shop.html">View all →</a>
+      </div>
+      <div class="product-grid" data-grid data-featured></div>
+    </div></section>
+  </main>
+
+  <footer data-footer></footer>
+
+  <script src="data/catalog.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script>
+    (function () {
+      // hero art
+      var hero = document.querySelector("[data-hero-art]");
+      if (hero) {
+        hero.innerHTML = Store.icon("anchor");
+        var heroSvg = hero.querySelector("svg");
+        if (heroSvg) heroSvg.style.color = "var(--accent)";
+      }
+
+      // product count stat
+      var statEl = document.querySelector("[data-stat-products]");
+      if (statEl) statEl.textContent = Store.catalog.products.length + "+";
+
+      // value props
+      var values = [
+        { ico: "shield", h: "Safest lithium made", p: "Solid-state cells survive a nail, 200kN crush, 2× overcharge and a dead short. Insurers welcome it." },
+        { ico: "cycle", h: "10,000 cycles", p: "Double the life of prismatic or cylindrical lithium, at 80% depth of discharge." },
+        { ico: "chip", h: "Victron native", p: "Everything talks VE.CAN / NMEA2000 and appears correctly on your Cerbo GX." },
+        { ico: "truck", h: "Ships AU-wide", p: "In-stock items dispatched from Arundel QLD. Trade freight accounts welcome." }
+      ];
+      document.querySelector("[data-values]").innerHTML = values.map(function (v) {
+        return '<div class="value"><div class="ico">' + Store.icon(v.ico) + '</div><h4>' + v.h + '</h4><p>' + v.p + '</p></div>';
+      }).join("");
+
+      // categories (exclude keypad buttons + accessories from the headline grid → show 8 systems)
+      var cats = Store.categories.filter(function (c) { return ["star-buttons", "accessories"].indexOf(c.id) === -1; }).slice(0, 8);
+      document.querySelector("[data-cats]").innerHTML = cats.map(function (c) {
+        return '<a class="cat-card" href="shop.html?cat=' + c.id + '">' +
+          '<span class="ctag">' + c.tag + '</span>' +
+          '<div class="ico">' + Store.icon(c.glyph) + '</div>' +
+          '<div><h3>' + c.name + '</h3><p>' + c.blurb + '</p>' +
+          '<div class="more">' + Store.categoryCount(c.id) + ' products →</div></div></a>';
+      }).join("");
+
+      // featured grid
+      var grid = document.querySelector("[data-featured]");
+      grid._list = Store.featured();
+      Store.renderGrid(grid, grid._list);
+    })();
+  </script>
+</body>
+</html>

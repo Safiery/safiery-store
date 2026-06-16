@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trade Login — Safiery</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23f6a623' d='M13 2L3 14h7l-1 8 10-12h-7z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/css/store.css">
+</head>
+<body data-nav="account.html">
+  <header data-header></header>
+
+  <main id="main" tabindex="-1"><div class="wrap">
+    <div data-account></div>
+  </div></main>
+
+  <footer data-footer></footer>
+
+  <script src="data/catalog.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script>
+    (function () {
+      var root = document.querySelector("[data-account]");
+
+      function loggedOut() {
+        root.innerHTML =
+          '<div class="auth-card">' +
+            '<span class="eyebrow" style="color:var(--cyan)">B2B / Reseller</span>' +
+            '<h1 style="margin-top:10px">Trade login</h1>' +
+            '<p class="muted" style="margin-top:4px">Log in to unlock your B2BKing tier pricing across the whole store. Guests are charged standard retail.</p>' +
+            '<form data-form>' +
+              '<div class="form-group"><label for="login-email">Email</label><input id="login-email" class="field" type="email" autocomplete="email" placeholder="you@company.com" data-email required></div>' +
+              '<div class="form-group"><label for="login-pass">Password</label><input id="login-pass" class="field" type="password" autocomplete="current-password" placeholder="••••••••" data-pass required></div>' +
+              '<button class="btn btn-primary btn-block btn-lg" type="submit">Log in &amp; apply trade pricing</button>' +
+              '<div class="form-error" data-err role="alert" aria-live="assertive"></div>' +
+            '</form>' +
+            '<div class="demo-accounts">' +
+              '<h4 style="font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-mut);margin-bottom:10px">Demo accounts — click to fill (password: ' + Store.esc(Store.catalog.demoPassword) + ')</h4>' +
+              '<table><tbody>' +
+                Store.catalog.demoAccounts.map(function (a) {
+                  var t = Store.catalog.b2bTiers.filter(function (x) { return x.id === a.tier; })[0];
+                  return '<tr><td><button type="button" class="link-btn" data-fill="' + a.email + '" aria-label="Fill login form with ' + a.email + '">' + a.email + '</button></td><td>' + (t ? t.name + " −" + Math.round(t.discount*100) + "%" : "") + '</td></tr>';
+                }).join("") +
+              '</tbody></table>' +
+            '</div>' +
+          '</div>';
+
+        var form = root.querySelector("[data-form]");
+        var err = root.querySelector("[data-err]");
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          var res = Store.login(root.querySelector("[data-email]").value, root.querySelector("[data-pass]").value);
+          if (res.ok) { Store.toast("Welcome, " + (res.account.company || res.account.email)); render(); }
+          else err.textContent = res.error;
+        });
+        root.querySelectorAll("[data-fill]").forEach(function (tr) {
+          tr.addEventListener("click", function () {
+            root.querySelector("[data-email]").value = tr.getAttribute("data-fill");
+            root.querySelector("[data-pass]").value = Store.catalog.demoPassword;
+          });
+        });
+      }
+
+      function loggedIn() {
+        var s = Store.getSession(), t = Store.tier();
+        // sample saving across a representative basket
+        var sample = ["ss-48v-3c", "scotty-3kw-1248", "star-power"].map(Store.byId).filter(Boolean);
+        var rows = sample.map(function (p) {
+          var pr = Store.pricing(p);
+          return '<tr><td>' + Store.esc(p.name) + '</td><td style="text-decoration:line-through;color:var(--text-mut)">' + Store.formatAUD(pr.base) + '</td><td style="color:var(--cyan)">' + Store.formatAUD(pr.effective) + '</td></tr>';
+        }).join("");
+        root.innerHTML =
+          '<div class="section-head" style="margin:30px 0 20px"><div><span class="eyebrow" style="color:var(--cyan)">Account</span><h2>Trade dashboard</h2></div>' +
+            '<button class="btn btn-ghost" data-logout>Log out</button></div>' +
+          '<div class="trade-banner" style="margin-bottom:24px">' + Store.icon("shield") +
+            '<div style="flex:1"><strong>' + Store.esc(s.company || s.email) + '</strong><div class="muted mono" style="font-size:12px">' + Store.esc(s.email) + '</div></div>' +
+            '<span class="tier-chip">' + t.name + ' · −' + Math.round(t.discount * 100) + '%</span></div>' +
+          '<div class="cart-layout">' +
+            '<div>' +
+              '<div class="notice" style="margin-bottom:16px"><strong>Your tier discount of ' + Math.round(t.discount*100) + '% is now applied live</strong> across every product, the cart and checkout. No codes needed.</div>' +
+              '<h3 style="margin:8px 0 12px">Your pricing — sample</h3>' +
+              '<table class="specs-table"><thead><tr><td>Product</td><td>RRP (ex GST)</td><td>Your price</td></tr></thead><tbody>' + rows + '</tbody></table>' +
+              '<div style="margin-top:22px;display:flex;gap:12px;flex-wrap:wrap">' +
+                '<a class="btn btn-primary" href="shop.html">Shop with trade pricing</a>' +
+                '<a class="btn btn-ghost" href="cart.html">View cart</a></div>' +
+            '</div>' +
+            '<aside class="summary">' +
+              '<h3>Trade tiers</h3>' +
+              Store.catalog.b2bTiers.map(function (x) {
+                var on = x.id === t.id;
+                return '<div class="sum-row" style="' + (on ? 'color:var(--cyan)' : '') + '">' + x.name +
+                  '<span class="v" style="' + (on ? 'color:var(--cyan)' : '') + '">−' + Math.round(x.discount*100) + '%</span></div>';
+              }).join("") +
+              '<p class="muted" style="font-size:12.5px;margin-top:14px">Tiers mirror your B2BKing group. Contact sales to move tiers.</p>' +
+            '</aside>' +
+          '</div>';
+        root.querySelector("[data-logout]").addEventListener("click", function () { Store.logout(); Store.toast("Logged out — retail pricing restored"); render(); });
+      }
+
+      function render() { if (Store.isTrade()) loggedIn(); else loggedOut(); }
+      window.__pageRerender = render;
+      render();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "safiery-store",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Safiery B2C + B2B ecommerce storefront — static site with Stripe checkout via Netlify Functions",
+  "scripts": {
+    "dev": "netlify dev",
+    "start": "netlify dev"
+  },
+  "dependencies": {
+    "stripe": "^16.12.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.0.0"
+  }
+}

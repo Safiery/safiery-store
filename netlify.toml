@@ -1,0 +1,36 @@
+# Safiery Store — Netlify configuration
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+  # ensure the catalog is bundled with the Stripe function
+  included_files = ["data/catalog.js"]
+
+[dev]
+  framework = "#static"
+  port = 8888
+
+# Pretty URLs (optional): /shop -> /shop.html etc.
+[[redirects]]
+  from = "/shop"
+  to = "/shop.html"
+  status = 200
+[[redirects]]
+  from = "/product"
+  to = "/product.html"
+  status = 200
+[[redirects]]
+  from = "/cart"
+  to = "/cart.html"
+  status = 200
+[[redirects]]
+  from = "/account"
+  to = "/account.html"
+  status = 200
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
