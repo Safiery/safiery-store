@@ -426,10 +426,8 @@ select.field { appearance: none; padding-right: 32px; background-image: url("dat
   .cart-line .ln-right { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; text-align: left; }
 }
 
-/* ---------- scroll snap ---------- */
-html { scroll-snap-type: y proximity; }
+/* ---------- section anchor offset (so dot-nav jumps clear the sticky header) ---------- */
 #s-hero, #s-scotty, #s-bmg, #s-battery, #s-star {
-  scroll-snap-align: start;
   scroll-margin-top: 106px;
 }
 
