@@ -12,6 +12,14 @@ window.Store = (function () {
 
   var LS_CART = "safiery_cart_v1";
   var LS_SESSION = "safiery_session_v1";
+  var LS_PRICES = "safiery_prices_v1";
+
+  // Quasar HQ (ERP) origin - source of B2B auth + pricing. Override with
+  // window.SAFIERY_ERP_BASE before store.js if it ever changes.
+  var ERP_BASE = (window.SAFIERY_ERP_BASE || "https://quasar-safiery-967.netlify.app").replace(/\/+$/, "");
+  // Store product id -> ERP catalog link ({wooId, wooCategory, confidence}). Generated
+  // by the catalog reconciliation; include data/catalog-links.js before store.js.
+  var LINKS = (window.SAFIERY_CATALOG_LINKS && window.SAFIERY_CATALOG_LINKS.links) || {};
 
   /* ---------------- lookups ---------------- */
   var prodIndex = {}; C.products.forEach(function (p) { prodIndex[p.id] = p; });
@@ -30,47 +38,102 @@ window.Store = (function () {
   }
   function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
 
-  /* ---------------- session / auth ---------------- */
+  /* ---------------- session / auth (magic-link via the ERP) ---------------- */
+  // Session = { token (ERP store-session JWT), contactId, name, company, email, tier }.
+  // The B2B price list is fetched from the ERP and cached in LS_PRICES (store id -> ex-GST $).
   function getSession() {
     try { return JSON.parse(localStorage.getItem(LS_SESSION)) || null; } catch (e) { return null; }
   }
+  function priceMap() {
+    try { return JSON.parse(localStorage.getItem(LS_PRICES)) || {}; } catch (e) { return {}; }
+  }
   function tier() {
     var s = getSession();
-    return s && s.tier ? (tierIndex[s.tier] || null) : null;
+    if (!s || !s.tier) return null;
+    return { id: s.tier, name: String(s.tier).charAt(0).toUpperCase() + String(s.tier).slice(1) };
   }
-  function isTrade() { return !!tier(); }
+  function isTrade() { return !!(getSession() && getSession().token); }
 
-  function login(email, password) {
-    email = (email || "").trim().toLowerCase();
-    var acct = C.demoAccounts.filter(function (a) { return a.email.toLowerCase() === email; })[0];
-    if (!acct) return { ok: false, error: "No trade account found for that email." };
-    if (password !== C.demoPassword) return { ok: false, error: "Incorrect password." };
-    localStorage.setItem(LS_SESSION, JSON.stringify({ email: acct.email, company: acct.company, tier: acct.tier }));
-    syncTradeMode(); emit("session:change");
-    return { ok: true, account: acct };
+  // Step 1: request a magic link (always resolves ok - the ERP never reveals whether
+  // the email exists; the link is emailed to the address owner).
+  function requestLogin(email) {
+    return fetch(ERP_BASE + "/.netlify/functions/customer-login-request", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: (email || "").trim().toLowerCase() })
+    }).then(function () { return { ok: true }; }).catch(function () { return { ok: true }; });
   }
-  function logout() { localStorage.removeItem(LS_SESSION); syncTradeMode(); emit("session:change"); }
+
+  // Step 2: exchange the emailed token for a store session, then load B2B prices.
+  function verifyLogin(token) {
+    return fetch(ERP_BASE + "/.netlify/functions/customer-login-verify", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: token })
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        if (!res.ok || !res.body || !res.body.ok) return { ok: false, error: (res.body && res.body.error) || "Sign-in failed" };
+        var p = res.body.profile || {};
+        var sess = { token: res.body.token, contactId: p.contactId, name: p.name, company: p.company, email: p.email, tier: p.tier || null };
+        localStorage.setItem(LS_SESSION, JSON.stringify(sess));
+        syncTradeMode(); emit("session:change");
+        return fetchPrices().then(function () { return { ok: true, profile: p }; });
+      }).catch(function (e) { return { ok: false, error: String((e && e.message) || e) }; });
+  }
+
+  // Fetch the customer's full B2B price list from the ERP and cache it. The ERP applies
+  // the contact's tier/category discounts off each product's RRP (authoritative).
+  function fetchPrices() {
+    var s = getSession();
+    if (!s || !s.token) return Promise.resolve(false);
+    var items = [];
+    C.products.forEach(function (p) {
+      if (p.variable) return;
+      var link = LINKS[p.id];
+      if (!link || !link.wooId) return;          // unlinked product -> retail only
+      items.push({ storeId: p.id, wooId: link.wooId, sku: p.sku, rrp: p.price, qty: 1 });
+    });
+    if (!items.length) return Promise.resolve(false);
+    return fetch(ERP_BASE + "/.netlify/functions/resolve-prices", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + s.token },
+      body: JSON.stringify({ items: items.map(function (i) { return { wooId: i.wooId, sku: i.sku, rrp: i.rrp, qty: 1 }; }) })
+    }).then(function (r) { if (!r.ok) throw new Error("prices " + r.status); return r.json(); })
+      .then(function (j) {
+        if (!j || !j.ok || !Array.isArray(j.items)) throw new Error("bad prices");
+        var map = {};
+        items.forEach(function (it, idx) { var u = j.items[idx] && +j.items[idx].unitPrice; if (u >= 0) map[it.storeId] = round2(u); });
+        try { localStorage.setItem(LS_PRICES, JSON.stringify(map)); } catch (e) {}
+        var sess = getSession(); if (sess) { sess.tier = (j.tier != null ? j.tier : sess.tier) || null; localStorage.setItem(LS_SESSION, JSON.stringify(sess)); }
+        emit("session:change");
+        return true;
+      }).catch(function (e) { console.warn("[store] fetchPrices failed:", e && e.message); return false; });
+  }
+
+  function logout() {
+    localStorage.removeItem(LS_SESSION); localStorage.removeItem(LS_PRICES);
+    syncTradeMode(); emit("session:change");
+  }
 
   /* ---------------- pricing engine ---------------- */
-  // base = current ex-GST sell price. B2B tier % comes off the base.
+  // base = ex-GST retail sell price (the store's RRP). The B2B effective price comes from
+  // the ERP-resolved price map (cached on login); retail when guest or product unlinked.
   function pricing(product) {
-    var t = tier();
-    var base = product.price;                 // ex-GST retail sell price
-    var listPrice = product.listPrice || null; // RRP for sale strike (B2C)
+    var base = product.price;
+    var listPrice = product.listPrice || null;
+    var pm = priceMap();
+    var b2b = (pm && pm[product.id] != null) ? +pm[product.id] : null;
     var out = {
       base: base,
-      effective: base,
+      effective: (b2b != null && b2b >= 0) ? b2b : base,
       listPrice: listPrice,
       onSale: !!product.sale && !!listPrice,
-      isTrade: !!t,
-      tier: t,
+      isTrade: isTrade(),
+      tier: tier(),
       discountPct: 0,
       saving: 0,
       variable: !!product.variable
     };
-    if (t) {
-      out.effective = round2(base * (1 - t.discount));
-      out.discountPct = Math.round(t.discount * 100);
+    if (b2b != null && base > 0 && out.effective < base) {
+      out.discountPct = Math.round((1 - out.effective / base) * 100);
       out.saving = round2(base - out.effective);
     }
     return out;
@@ -202,7 +265,7 @@ window.Store = (function () {
     var pre = pr.variable ? '<span style="font-size:11px;color:var(--text-mut)">from </span>' : "";
     var sizeCls = opts.lg ? " lg" : "";
     var html = '<div class="price' + sizeCls + '">';
-    if (pr.isTrade) {
+    if (pr.isTrade && pr.saving > 0) {
       html += '<span class="now b2b">' + pre + CUR + formatAUD(pr.effective).slice(1) + '</span>';
       html += '<span class="retail-strike">' + (pr.listPrice ? 'RRP ' + formatAUD(pr.listPrice) : 'List ' + formatAUD(pr.base)) + '</span>';
       html += '<span class="save">Trade −' + pr.discountPct + '% · save ' + formatAUD(pr.saving) + '</span>';
@@ -398,7 +461,7 @@ window.Store = (function () {
     fetch("/.netlify/functions/create-checkout-session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: items, accountEmail: s ? s.email : null })
+      body: JSON.stringify({ items: items, accountToken: s ? s.token : null, accountEmail: s ? s.email : null })
     }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
       .then(function (res) {
         if (res.ok && res.body.url) { window.location.href = res.body.url; return; }
@@ -430,7 +493,8 @@ window.Store = (function () {
     productsIn: productsIn, categoryCount: categoryCount, featured: featured,
     formatAUD: formatAUD, round2: round2, esc: esc, icon: icon,
     pricing: pricing, priceHTML: priceHTML, productCard: productCard, renderGrid: renderGrid, productArt: productArt,
-    getSession: getSession, tier: tier, isTrade: isTrade, login: login, logout: logout,
+    getSession: getSession, tier: tier, isTrade: isTrade, logout: logout,
+    requestLogin: requestLogin, verifyLogin: verifyLogin, fetchPrices: fetchPrices, priceMap: priceMap,
     cartItems: cartItems, cartCount: cartCount, cartTotals: cartTotals,
     addToCart: addToCart, setQty: setQty, removeFromCart: removeFromCart, clearCart: clearCart,
     checkout: checkout, toast: toast, refreshChrome: refreshChrome,

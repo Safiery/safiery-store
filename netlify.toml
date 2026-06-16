@@ -8,8 +8,8 @@
 
 [functions]
   node_bundler = "esbuild"
-  # ensure the catalog is bundled with the Stripe function
-  included_files = ["data/catalog.js"]
+  # bundle the catalog + the ERP catalog link map with the functions
+  included_files = ["data/catalog.js", "data/catalog-links.js"]
 
 [dev]
   framework = "#static"

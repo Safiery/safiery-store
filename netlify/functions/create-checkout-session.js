@@ -1,13 +1,20 @@
 /* =============================================================================
  * Netlify Function: create-checkout-session
- * Creates a Stripe Checkout Session. Prices are recomputed HERE from the same
- * catalog the front-end uses, so the client can never dictate the amount.
- * The B2B tier is resolved from the (demo) account on the server too.
+ * Creates a Stripe Checkout Session. Prices are recomputed HERE from the trusted
+ * catalog, and B2B pricing is resolved AUTHORITATIVELY from the Quasar ERP
+ * (resolve-prices) using the customer's store-session token - the client can never
+ * dictate the amount or the discount tier.
  *
- * Env required:  STRIPE_SECRET_KEY   (sk_test_… or sk_live_…)
- * Env optional:  URL                 (Netlify sets this automatically)
+ * Each line carries its SKU + ERP catalog id (woo:<id>) in Stripe product metadata
+ * so the stripe-webhook can rebuild the order for the ERP.
+ *
+ * Env required:  STRIPE_SECRET_KEY
+ * Env for B2B:   ERP_BASE_URL (the Quasar HQ origin), STORE_SHARED_SECRET
+ * Env optional:  URL (Netlify sets it automatically)
  * ========================================================================== */
 const CATALOG = require("../../data/catalog.js");
+let LINKS = {};
+try { LINKS = require("../../data/catalog-links.js").links || {}; } catch (e) { LINKS = {}; }
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -19,11 +26,28 @@ const json = (statusCode, body) => ({ statusCode, headers: { ...CORS, "Content-T
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 const cents = (n) => Math.round(n * 100);
 
-function tierForEmail(email) {
-  if (!email) return null;
-  const acct = CATALOG.demoAccounts.find((a) => a.email.toLowerCase() === String(email).toLowerCase());
-  if (!acct) return null;
-  return CATALOG.b2bTiers.find((t) => t.id === acct.tier) || null;
+// Ask the ERP for authoritative B2B unit prices for these items (ex-GST), using the
+// customer's store-session token. Returns { ok, status, tier, prices: number[] } where
+// prices aligns by index with `items`. ok=false + status=401 => not really logged in
+// (treat as retail); ok=false + other => ERP problem (caller should NOT overcharge).
+async function erpPrices(items, token) {
+  const base = (process.env.ERP_BASE_URL || "").replace(/\/+$/, "");
+  const secret = process.env.STORE_SHARED_SECRET || "";
+  if (!base || !token) return { ok: false, status: 0, reason: "no_erp_or_token" };
+  try {
+    const res = await fetch(base + "/.netlify/functions/resolve-prices", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token, "X-Store-Secret": secret },
+      body: JSON.stringify({ items: items.map((i) => ({ wooId: i.wooId, sku: i.sku, rrp: i.rrp, qty: i.qty })) })
+    });
+    if (res.status === 401) return { ok: false, status: 401 };
+    if (!res.ok) return { ok: false, status: res.status };
+    const j = await res.json();
+    if (!j || !j.ok || !Array.isArray(j.items)) return { ok: false, status: res.status };
+    return { ok: true, status: 200, tier: j.tier || null, prices: j.items.map((x) => +x.unitPrice) };
+  } catch (e) {
+    return { ok: false, status: 0, reason: String((e && e.message) || e) };
+  }
 }
 
 exports.handler = async (event) => {
@@ -32,7 +56,7 @@ exports.handler = async (event) => {
 
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) {
-    return json(400, { error: "Stripe is not configured. Set STRIPE_SECRET_KEY in your Netlify environment (Site settings → Environment variables)." });
+    return json(400, { error: "Stripe is not configured. Set STRIPE_SECRET_KEY in your Netlify environment (Site settings -> Environment variables)." });
   }
 
   let payload;
@@ -41,46 +65,63 @@ exports.handler = async (event) => {
 
   const requested = Array.isArray(payload.items) ? payload.items : [];
   if (!requested.length) return json(400, { error: "Cart is empty" });
+  const token = typeof payload.accountToken === "string" ? payload.accountToken : null;
 
-  const tier = tierForEmail(payload.accountEmail);
-  const discount = tier ? tier.discount : 0;
-
-  // Build authoritative line items (ex-GST) from the trusted catalog.
+  // Build the trusted cart (server reads its own catalog; client only sent id + qty).
   const productIndex = {};
   CATALOG.products.forEach((p) => { productIndex[p.id] = p; });
+  const cart = [];
+  for (const row of requested) {
+    const p = productIndex[row.id];
+    if (!p || p.variable) continue;          // unknown / quote-only -> never transact
+    const qty = Math.max(1, Math.min(999, parseInt(row.qty, 10) || 1));
+    const link = LINKS[p.id] || {};
+    cart.push({ storeId: p.id, sku: p.sku || p.id, name: p.name, rrp: round2(p.price), qty, wooId: link.wooId || null });
+  }
+  if (!cart.length) return json(400, { error: "No valid items in cart" });
+
+  // Authoritative B2B pricing from the ERP (falls back to retail when not logged in).
+  let unit = cart.map((c) => c.rrp);   // default: retail RRP ex-GST
+  let tier = "retail";
+  if (token) {
+    const r = await erpPrices(cart, token);
+    if (r.ok) {
+      unit = cart.map((c, i) => (r.prices[i] >= 0 ? round2(r.prices[i]) : c.rrp));
+      tier = r.tier || "retail";
+    } else if (r.status === 401) {
+      // Token expired/invalid -> behave as a guest (retail). The store UI would also
+      // have shown retail, so this is consistent and never overcharges.
+    } else {
+      // ERP unreachable: a logged-in customer may have been shown trade prices. Do NOT
+      // silently charge retail (overcharge) - fail so they retry.
+      return json(503, { error: "Trade pricing is temporarily unavailable. Please try again in a moment." });
+    }
+  }
 
   let subtotalExGst = 0;
   const line_items = [];
-  for (const row of requested) {
-    const p = productIndex[row.id];
-    const qty = Math.max(1, Math.min(999, parseInt(row.qty, 10) || 1));
-    if (!p) continue;          // silently drop unknown ids — never trust client prices
-    if (p.variable) continue;  // quote-only items can't be transacted at the floor price
-    const unitExGst = round2(p.price * (1 - discount));
-    subtotalExGst += unitExGst * qty;
+  cart.forEach((c, i) => {
+    const u = unit[i];
+    subtotalExGst += u * c.qty;
     line_items.push({
-      quantity: qty,
+      quantity: c.qty,
       price_data: {
         currency: (CATALOG.currency || "AUD").toLowerCase(),
-        unit_amount: cents(unitExGst),
-        product_data: {
-          name: p.name,
-          metadata: { sku: p.sku || p.id, tier: tier ? tier.id : "retail" }
-        }
+        unit_amount: cents(u),
+        product_data: { name: c.name, metadata: { sku: c.sku, wooId: c.wooId || "", storeId: c.storeId, tier } }
       }
     });
-  }
-  if (!line_items.length) return json(400, { error: "No valid items in cart" });
+  });
 
-  // GST as its own line so the Stripe total exactly matches the cart (inc GST).
-  // Round the subtotal first so the GST base is identical to the client's (avoids 1c drift).
+  // GST as its own line so the Stripe total matches the cart (inc GST). Round the
+  // subtotal first so the GST base matches the client's (avoids 1c drift).
   const gst = round2(round2(subtotalExGst) * (CATALOG.gstRate || 0.1));
   line_items.push({
     quantity: 1,
     price_data: {
       currency: (CATALOG.currency || "AUD").toLowerCase(),
       unit_amount: cents(gst),
-      product_data: { name: `GST (${Math.round((CATALOG.gstRate || 0.1) * 100)}%)` }
+      product_data: { name: `GST (${Math.round((CATALOG.gstRate || 0.1) * 100)}%)`, metadata: { gst: "1" } }
     }
   });
 
@@ -90,7 +131,6 @@ exports.handler = async (event) => {
     (event.headers && event.headers.host ? `https://${event.headers.host}` : "");
   if (!base) return json(500, { error: "Site URL not configured (set the URL environment variable)." });
 
-  // Only pass a syntactically valid email to Stripe — a malformed one would make the session throw.
   const rawEmail = typeof payload.accountEmail === "string" ? payload.accountEmail.trim() : "";
   const customerEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail) ? rawEmail : undefined;
 
@@ -103,7 +143,8 @@ exports.handler = async (event) => {
       billing_address_collection: "required",
       shipping_address_collection: { allowed_countries: ["AU"] },
       phone_number_collection: { enabled: true },
-      metadata: { tier: tier ? tier.id : "retail", trade_discount: String(discount) },
+      // store_order=1 marks sessions the stripe-webhook should push to the ERP.
+      metadata: { store_order: "1", tier },
       success_url: `${base}/checkout-success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/checkout-cancel.html`
     });

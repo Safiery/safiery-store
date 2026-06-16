@@ -17,88 +17,109 @@
   <footer data-footer></footer>
 
   <script src="data/catalog.js"></script>
-  <script src="assets/js/store.js?v=2"></script>
+  <script src="data/catalog-links.js"></script>
+  <script src="assets/js/store.js?v=3"></script>
+  <script src="assets/js/assistant.js" defer></script>
   <script>
     (function () {
       var root = document.querySelector("[data-account]");
 
+      // Passwordless: enter email -> we email a one-time sign-in link.
       function loggedOut() {
         root.innerHTML =
           '<div class="auth-card">' +
             '<span class="eyebrow" style="color:var(--brand)">B2B / Reseller</span>' +
             '<h1 style="margin-top:10px">Trade login</h1>' +
-            '<p class="muted" style="margin-top:4px">Log in to unlock your B2BKing tier pricing across the whole store. Guests are charged standard retail.</p>' +
+            '<p class="muted" style="margin-top:4px">Enter your account email and we will send you a secure one-time sign-in link. Logging in unlocks your trade pricing across the whole store. Guests are charged standard retail.</p>' +
             '<form data-form>' +
-              '<div class="form-group"><label for="login-email">Email</label><input id="login-email" class="field" type="email" autocomplete="email" placeholder="you@company.com" data-email required></div>' +
-              '<div class="form-group"><label for="login-pass">Password</label><input id="login-pass" class="field" type="password" autocomplete="current-password" placeholder="••••••••" data-pass required></div>' +
-              '<button class="btn btn-primary btn-block btn-lg" type="submit">Log in &amp; apply trade pricing</button>' +
+              '<div class="form-group"><label for="login-email">Email</label><input id="login-email" class="field" type="email" autocomplete="email" inputmode="email" placeholder="you@company.com" data-email required></div>' +
+              '<button class="btn btn-primary btn-block btn-lg" type="submit" data-submit>Email me a sign-in link</button>' +
               '<div class="form-error" data-err role="alert" aria-live="assertive"></div>' +
             '</form>' +
-            '<div class="demo-accounts">' +
-              '<h4 style="font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-mut);margin-bottom:10px">Demo accounts — click to fill (password: ' + Store.esc(Store.catalog.demoPassword) + ')</h4>' +
-              '<table><tbody>' +
-                Store.catalog.demoAccounts.map(function (a) {
-                  var t = Store.catalog.b2bTiers.filter(function (x) { return x.id === a.tier; })[0];
-                  return '<tr><td><button type="button" class="link-btn" data-fill="' + a.email + '" aria-label="Fill login form with ' + a.email + '">' + a.email + '</button></td><td>' + (t ? t.name + " −" + Math.round(t.discount*100) + "%" : "") + '</td></tr>';
-                }).join("") +
-              '</tbody></table>' +
-            '</div>' +
+            '<p class="muted" style="font-size:12.5px;margin-top:14px">Trade accounts are set up by Safiery. If your email is not recognised, <a href="mailto:sales@safiery.com?subject=Trade%20account">contact sales</a> to become a partner.</p>' +
           '</div>';
-
         var form = root.querySelector("[data-form]");
         var err = root.querySelector("[data-err]");
         form.addEventListener("submit", function (e) {
           e.preventDefault();
-          var res = Store.login(root.querySelector("[data-email]").value, root.querySelector("[data-pass]").value);
-          if (res.ok) { Store.toast("Welcome, " + (res.account.company || res.account.email)); render(); }
-          else err.textContent = res.error;
+          var email = root.querySelector("[data-email]").value;
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = "Enter a valid email address."; return; }
+          var btn = root.querySelector("[data-submit]"); btn.disabled = true; btn.textContent = "Sending…";
+          Store.requestLogin(email).then(function () { sentNotice(email); });
         });
-        root.querySelectorAll("[data-fill]").forEach(function (tr) {
-          tr.addEventListener("click", function () {
-            root.querySelector("[data-email]").value = tr.getAttribute("data-fill");
-            root.querySelector("[data-pass]").value = Store.catalog.demoPassword;
-          });
+      }
+
+      function sentNotice(email) {
+        root.innerHTML =
+          '<div class="auth-card">' +
+            '<span class="eyebrow" style="color:var(--brand)">Check your inbox</span>' +
+            '<h1 style="margin-top:10px">Sign-in link sent</h1>' +
+            '<p class="muted" style="margin-top:8px">If <strong>' + Store.esc(email) + '</strong> is a Safiery account, a one-time sign-in link is on its way. It works once and expires in 15 minutes.</p>' +
+            '<p class="muted" style="margin-top:8px">Didn\'t get it? Check spam, or <button type="button" class="link-btn" data-again>try again</button>.</p>' +
+          '</div>';
+        var again = root.querySelector("[data-again]");
+        if (again) again.addEventListener("click", loggedOut);
+      }
+
+      function signingIn(token) {
+        root.innerHTML = '<div class="auth-card"><h1>Signing you in…</h1><p class="muted">One moment.</p></div>';
+        Store.verifyLogin(token).then(function (res) {
+          // Strip the token from the URL so it is not bookmarked or shared.
+          try { history.replaceState({}, "", "account.html"); } catch (e) {}
+          if (res.ok) { Store.toast("Welcome" + (res.profile && res.profile.company ? ", " + res.profile.company : "")); loggedIn(); }
+          else {
+            root.innerHTML = '<div class="auth-card"><span class="eyebrow" style="color:var(--brand)">Sign-in</span>' +
+              '<h1 style="margin-top:10px">That link didn\'t work</h1>' +
+              '<p class="muted" style="margin-top:8px">' + Store.esc(res.error || "The link has expired or was already used.") + '</p>' +
+              '<button class="btn btn-primary" data-retry style="margin-top:14px">Request a new link</button></div>';
+            var r = root.querySelector("[data-retry]"); if (r) r.addEventListener("click", loggedOut);
+          }
         });
       }
 
       function loggedIn() {
         var s = Store.getSession(), t = Store.tier();
-        // sample saving across a representative basket
         var sample = ["ss-48v-3c", "scotty-3kw-1248", "star-power"].map(Store.byId).filter(Boolean);
         var rows = sample.map(function (p) {
           var pr = Store.pricing(p);
-          return '<tr><td>' + Store.esc(p.name) + '</td><td style="text-decoration:line-through;color:var(--text-mut)">' + Store.formatAUD(pr.base) + '</td><td style="color:var(--brand)">' + Store.formatAUD(pr.effective) + '</td></tr>';
+          var your = (pr.saving > 0) ? '<span style="color:var(--brand)">' + Store.formatAUD(pr.effective) + '</span>' : Store.formatAUD(pr.effective);
+          return '<tr><td>' + Store.esc(p.name) + '</td><td style="color:var(--text-mut)">' + Store.formatAUD(pr.base) + '</td><td>' + your + '</td></tr>';
         }).join("");
+        var tierChip = t ? '<span class="tier-chip">' + Store.esc(t.name) + ' tier</span>' : '<span class="tier-chip">Standard pricing</span>';
+        var banner = t
+          ? '<div class="notice" style="margin-bottom:16px"><strong>Your ' + Store.esc(t.name) + ' trade pricing is applied live</strong> across every product, the cart and checkout. No codes needed.</div>'
+          : '<div class="notice" style="margin-bottom:16px">You are signed in. No trade tier is set on your account yet, so standard retail pricing applies. <a href="mailto:sales@safiery.com?subject=Trade%20pricing">Contact sales</a> about a trade account.</div>';
         root.innerHTML =
           '<div class="section-head" style="margin:30px 0 20px"><div><span class="eyebrow" style="color:var(--brand)">Account</span><h2>Trade dashboard</h2></div>' +
             '<button class="btn btn-ghost" data-logout>Log out</button></div>' +
           '<div class="trade-banner" style="margin-bottom:24px">' + Store.icon("shield") +
-            '<div style="flex:1"><strong>' + Store.esc(s.company || s.email) + '</strong><div class="muted mono" style="font-size:12px">' + Store.esc(s.email) + '</div></div>' +
-            '<span class="tier-chip">' + t.name + ' · −' + Math.round(t.discount * 100) + '%</span></div>' +
+            '<div style="flex:1"><strong>' + Store.esc(s.company || s.name || s.email) + '</strong><div class="muted mono" style="font-size:12px">' + Store.esc(s.email || "") + '</div></div>' +
+            tierChip + '</div>' +
           '<div class="cart-layout">' +
-            '<div>' +
-              '<div class="notice" style="margin-bottom:16px"><strong>Your tier discount of ' + Math.round(t.discount*100) + '% is now applied live</strong> across every product, the cart and checkout. No codes needed.</div>' +
+            '<div>' + banner +
               '<h3 style="margin:8px 0 12px">Your pricing — sample</h3>' +
               '<table class="specs-table"><thead><tr><td>Product</td><td>RRP (ex GST)</td><td>Your price</td></tr></thead><tbody>' + rows + '</tbody></table>' +
               '<div style="margin-top:22px;display:flex;gap:12px;flex-wrap:wrap">' +
-                '<a class="btn btn-primary" href="shop.html">Shop with trade pricing</a>' +
+                '<a class="btn btn-primary" href="shop.html">Shop with your pricing</a>' +
                 '<a class="btn btn-ghost" href="cart.html">View cart</a></div>' +
             '</div>' +
             '<aside class="summary">' +
-              '<h3>Trade tiers</h3>' +
-              Store.catalog.b2bTiers.map(function (x) {
-                var on = x.id === t.id;
-                return '<div class="sum-row" style="' + (on ? 'color:var(--brand)' : '') + '">' + x.name +
-                  '<span class="v" style="' + (on ? 'color:var(--brand)' : '') + '">−' + Math.round(x.discount*100) + '%</span></div>';
-              }).join("") +
-              '<p class="muted" style="font-size:12.5px;margin-top:14px">Tiers mirror your B2BKing group. Contact sales to move tiers.</p>' +
+              '<h3>Your account</h3>' +
+              '<div class="sum-row">Company<span class="v">' + Store.esc(s.company || "—") + '</span></div>' +
+              '<div class="sum-row">Email<span class="v">' + Store.esc(s.email || "—") + '</span></div>' +
+              '<div class="sum-row">Tier<span class="v">' + (t ? Store.esc(t.name) : "Standard") + '</span></div>' +
+              '<p class="muted" style="font-size:12.5px;margin-top:14px">Pricing is set in Safiery HQ. Contact sales to change your tier.</p>' +
             '</aside>' +
           '</div>';
         root.querySelector("[data-logout]").addEventListener("click", function () { Store.logout(); Store.toast("Logged out — retail pricing restored"); render(); });
       }
 
-      function render() { if (Store.isTrade()) loggedIn(); else loggedOut(); }
-      window.__pageRerender = render;
+      function render() {
+        var token = new URLSearchParams(location.search).get("login");
+        if (token) { signingIn(token); return; }
+        if (Store.isTrade()) loggedIn(); else loggedOut();
+      }
+      window.__pageRerender = function () { if (!new URLSearchParams(location.search).get("login")) render(); };
       render();
     })();
   </script>
