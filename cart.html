@@ -39,15 +39,15 @@
           var pct = tot.subtotalRetail > 0 ? Math.round((tot.saving / tot.subtotalRetail) * 100) : 0;
           bannerEl.innerHTML = '<div class="trade-banner" style="margin-bottom:24px">' +
             Store.icon("shield") +
-            '<div style="flex:1"><strong>Trade pricing active</strong> <span class="muted">— ' + Store.esc(s.company || s.email || "") + '</span></div>' +
+            '<div style="flex:1"><strong>Account pricing active</strong> <span class="muted">— ' + Store.esc(s.company || s.email || "") + '</span></div>' +
             '<span class="tier-chip">' + Store.esc(t.name) + ' tier' + (pct > 0 ? ' · −' + pct + '%' : '') + '</span></div>';
         } else if (Store.isTrade()) {
           // Signed in but no trade tier set yet - standard pricing (matches account.html).
           bannerEl.innerHTML = '<div class="notice" style="margin-bottom:24px; display:flex; gap:14px; align-items:center; flex-wrap:wrap">' +
-            Store.icon("user") + '<span style="flex:1">You\'re signed in' + (s && s.company ? ' as ' + Store.esc(s.company) : '') + '. No trade tier is set on your account yet, so standard pricing applies. <a href="mailto:sales@safiery.com?subject=Trade%20pricing" style="color:var(--accent)">Contact sales</a> about a trade account.</span></div>';
+            Store.icon("user") + '<span style="flex:1">You\'re signed in' + (s && s.company ? ' as ' + Store.esc(s.company) : '') + '. Standard pricing applies on your account. <a href="mailto:sales@safiery.com?subject=Account%20pricing" style="color:var(--accent)">Contact sales</a> about account pricing.</span></div>';
         } else {
           bannerEl.innerHTML = '<div class="notice" style="margin-bottom:24px; display:flex; gap:14px; align-items:center; flex-wrap:wrap">' +
-            Store.icon("user") + '<span style="flex:1">Reseller or installer? <a href="account.html" style="color:var(--accent)">Log in</a> to apply your trade discount to this cart.</span></div>';
+            Store.icon("user") + '<span style="flex:1">Have an account? <a href="account.html" style="color:var(--accent)">Log in</a> to apply your account pricing to this cart.</span></div>';
         }
       }
 
@@ -85,7 +85,7 @@
               '<h3>Order summary</h3>' +
               (t.trade ? '<div class="sum-row">Retail subtotal <span class="v" style="text-decoration:line-through;color:var(--text-mut)">' + Store.formatAUD(t.subtotalRetail) + '</span></div>' : '') +
               '<div class="sum-row">Subtotal (ex GST) <span class="v">' + Store.formatAUD(t.subtotal) + '</span></div>' +
-              (t.saving > 0 ? '<div class="sum-row save">Trade saving <span class="v">−' + Store.formatAUD(t.saving) + '</span></div>' : '') +
+              (t.saving > 0 ? '<div class="sum-row save">Your saving <span class="v">−' + Store.formatAUD(t.saving) + '</span></div>' : '') +
               '<div class="sum-row">GST (10%) <span class="v">' + Store.formatAUD(t.gst) + '</span></div>' +
               '<div class="sum-row">Freight <span class="v">Quoted by sales</span></div>' +
               '<div class="sum-total"><span class="lbl">Total (inc GST)</span><span class="v">' + Store.formatAUD(t.total) + '</span></div>' +

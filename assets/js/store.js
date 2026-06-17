@@ -269,7 +269,7 @@ window.Store = (function () {
     if (pr.isTrade && pr.saving > 0) {
       html += '<span class="now b2b">' + pre + CUR + formatAUD(pr.effective).slice(1) + '</span>';
       html += '<span class="retail-strike">' + (pr.listPrice ? 'RRP ' + formatAUD(pr.listPrice) : 'List ' + formatAUD(pr.base)) + '</span>';
-      html += '<span class="save">Trade −' + pr.discountPct + '% · save ' + formatAUD(pr.saving) + '</span>';
+      html += '<span class="save">−' + pr.discountPct + '% · save ' + formatAUD(pr.saving) + '</span>';
     } else {
       html += '<span class="now">' + pre + CUR + formatAUD(pr.effective).slice(1) + '</span>';
       if (pr.onSale) html += '<span class="was">' + formatAUD(pr.listPrice) + '</span>';
@@ -340,15 +340,11 @@ window.Store = (function () {
     }).join("");
     return '' +
     '<a class="skip-link" href="#main">Skip to content</a>' +
-    '<div class="topstrip"><div class="wrap">' +
-      '<span><span class="dot">●</span> Genset-free power for land &amp; water · Ships AU-wide</span>' +
-      '<span class="hide-sm">AUD · GST registered · sales@safiery.com</span>' +
-    '</div></div>' +
     '<div class="header-main"><div class="wrap">' +
       '<a class="brand" href="index.html" aria-label="Safiery — home"><img class="brand-logo" src="assets/img/safiery-logo.webp" alt="Safiery" width="350" height="293"></a>' +
       '<nav class="nav" aria-label="Primary">' + navlinks + '</nav>' +
       '<div class="header-actions">' +
-        '<span class="trade-pill"><span class="blip"></span><span data-trade-label>TRADE</span></span>' +
+        '<span class="trade-pill"><span class="blip"></span><span data-trade-label>Account</span></span>' +
         '<a class="icon-btn" href="account.html" aria-label="Account">' + icon("user") + '</a>' +
         '<a class="icon-btn" href="cart.html" aria-label="Cart">' + icon("cart") + '<span class="cart-count" data-cart-count>0</span></a>' +
         '<button class="icon-btn menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="nav-drawer">' + icon("menu") + '</button>' +
@@ -358,7 +354,7 @@ window.Store = (function () {
   function drawerHTML() {
     var links = NAV.map(function (n) { return '<a href="' + n.href + '">' + n.label + '</a>'; }).join("");
     return '<button class="icon-btn close" aria-label="Close">' + icon("close") + '</button>' + links +
-      '<a href="account.html">Account / Trade Login</a><a href="cart.html">Cart</a>';
+      '<a href="account.html">Account</a><a href="cart.html">Cart</a>';
   }
   function footerHTML() {
     var catLinks = C.categories.slice(0, 6).map(function (c) { return '<li><a href="shop.html?cat=' + c.id + '">' + c.name + '</a></li>'; }).join("");
@@ -371,7 +367,7 @@ window.Store = (function () {
       '<div><h4>Company</h4><ul>' +
         '<li><a href="account.html">Become a Partner</a></li><li><a href="mailto:sales@safiery.com">About Us</a></li>' +
         '<li><a href="mailto:sales@safiery.com?subject=Warranty%20%2F%20RMA">Warranty &amp; RMA</a></li><li><a href="account.html">Resellers</a></li>' +
-        '<li><a href="account.html">Trade Login</a></li></ul></div>' +
+        '<li><a href="account.html">Account login</a></li></ul></div>' +
       '<div><h4>Get in touch</h4><ul>' +
         '<li>QLD HO: 45/8 Distribution Court, Arundel QLD 4214</li>' +
         '<li><a href="mailto:sales@safiery.com">sales@safiery.com</a></li>' +
@@ -431,7 +427,7 @@ window.Store = (function () {
     });
     var s = getSession();
     document.querySelectorAll("[data-trade-label]").forEach(function (el) {
-      var t = tier(); el.textContent = t ? (s.company ? s.company + " · " + t.name : t.name) : "TRADE";
+      el.textContent = (s && s.company) || "Account";
     });
     syncTradeMode();
   }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trade Login — Safiery</title>
+  <title>Sign in — Safiery</title>
   <link rel="icon" type="image/png" href="assets/img/safiery-logo-2021.png">
   <link rel="stylesheet" href="assets/css/store.css?v=2">
 </head>
@@ -28,15 +28,15 @@
       function loggedOut() {
         root.innerHTML =
           '<div class="auth-card">' +
-            '<span class="eyebrow" style="color:var(--brand)">B2B / Reseller</span>' +
-            '<h1 style="margin-top:10px">Trade login</h1>' +
-            '<p class="muted" style="margin-top:4px">Enter your account email and we will send you a secure one-time sign-in link. Logging in unlocks your trade pricing across the whole store. Guests are charged standard retail.</p>' +
+            '<span class="eyebrow" style="color:var(--brand)">Account</span>' +
+            '<h1 style="margin-top:10px">Sign in or create your account</h1>' +
+            '<p class="muted" style="margin-top:4px">Enter your email and we will send you a secure one-time sign-in link — no password needed. New to Safiery? The link creates your account.</p>' +
             '<form data-form>' +
               '<div class="form-group"><label for="login-email">Email</label><input id="login-email" class="field" type="email" autocomplete="email" inputmode="email" placeholder="you@company.com" data-email required></div>' +
               '<button class="btn btn-primary btn-block btn-lg" type="submit" data-submit>Email me a sign-in link</button>' +
               '<div class="form-error" data-err role="alert" aria-live="assertive"></div>' +
             '</form>' +
-            '<p class="muted" style="font-size:12.5px;margin-top:14px">Trade accounts are set up by Safiery. If your email is not recognised, <a href="mailto:sales@safiery.com?subject=Trade%20account">contact sales</a> to become a partner.</p>' +
+            '<p class="muted" style="font-size:12.5px;margin-top:14px">Business customer? Once you are signed in, <a href="mailto:sales@safiery.com?subject=Account%20pricing">contact sales</a> about account pricing.</p>' +
           '</div>';
         var form = root.querySelector("[data-form]");
         var err = root.querySelector("[data-err]");
@@ -54,7 +54,7 @@
           '<div class="auth-card">' +
             '<span class="eyebrow" style="color:var(--brand)">Check your inbox</span>' +
             '<h1 style="margin-top:10px">Sign-in link sent</h1>' +
-            '<p class="muted" style="margin-top:8px">If <strong>' + Store.esc(email) + '</strong> is a Safiery account, a one-time sign-in link is on its way. It works once and expires in 15 minutes.</p>' +
+            '<p class="muted" style="margin-top:8px">A one-time sign-in link is on its way to <strong>' + Store.esc(email) + '</strong>. It works once and expires in 15 minutes.</p>' +
             '<p class="muted" style="margin-top:8px">Didn\'t get it? Check spam, or <button type="button" class="link-btn" data-again>try again</button>.</p>' +
           '</div>';
         var again = root.querySelector("[data-again]");
@@ -85,12 +85,12 @@
           var your = (pr.saving > 0) ? '<span style="color:var(--brand)">' + Store.formatAUD(pr.effective) + '</span>' : Store.formatAUD(pr.effective);
           return '<tr><td>' + Store.esc(p.name) + '</td><td style="color:var(--text-mut)">' + Store.formatAUD(pr.base) + '</td><td>' + your + '</td></tr>';
         }).join("");
-        var tierChip = t ? '<span class="tier-chip">' + Store.esc(t.name) + ' tier</span>' : '<span class="tier-chip">Standard pricing</span>';
+        var tierChip = '<span class="tier-chip">Account type: ' + (t ? Store.esc(t.name) : "Standard") + '</span>';
         var banner = t
-          ? '<div class="notice" style="margin-bottom:16px"><strong>Your ' + Store.esc(t.name) + ' trade pricing is applied live</strong> across every product, the cart and checkout. No codes needed.</div>'
-          : '<div class="notice" style="margin-bottom:16px">You are signed in. No trade tier is set on your account yet, so standard retail pricing applies. <a href="mailto:sales@safiery.com?subject=Trade%20pricing">Contact sales</a> about a trade account.</div>';
+          ? '<div class="notice" style="margin-bottom:16px"><strong>Your account pricing is applied live</strong> across every product, the cart and checkout. No codes needed.</div>'
+          : '<div class="notice" style="margin-bottom:16px">You are signed in. Standard pricing applies on your account. <a href="mailto:sales@safiery.com?subject=Account%20pricing">Contact sales</a> about account pricing.</div>';
         root.innerHTML =
-          '<div class="section-head" style="margin:30px 0 20px"><div><span class="eyebrow" style="color:var(--brand)">Account</span><h2>Trade dashboard</h2></div>' +
+          '<div class="section-head" style="margin:30px 0 20px"><div><span class="eyebrow" style="color:var(--brand)">Account</span><h2>Your account</h2></div>' +
             '<button class="btn btn-ghost" data-logout>Log out</button></div>' +
           '<div class="trade-banner" style="margin-bottom:24px">' + Store.icon("shield") +
             '<div style="flex:1"><strong>' + Store.esc(s.company || s.name || s.email) + '</strong><div class="muted mono" style="font-size:12px">' + Store.esc(s.email || "") + '</div></div>' +
@@ -107,8 +107,8 @@
               '<h3>Your account</h3>' +
               '<div class="sum-row">Company<span class="v">' + Store.esc(s.company || "—") + '</span></div>' +
               '<div class="sum-row">Email<span class="v">' + Store.esc(s.email || "—") + '</span></div>' +
-              '<div class="sum-row">Tier<span class="v">' + (t ? Store.esc(t.name) : "Standard") + '</span></div>' +
-              '<p class="muted" style="font-size:12.5px;margin-top:14px">Pricing is set in Safiery HQ. Contact sales to change your tier.</p>' +
+              '<div class="sum-row">Account type<span class="v">' + (t ? Store.esc(t.name) : "Standard") + '</span></div>' +
+              '<p class="muted" style="font-size:12.5px;margin-top:14px">Pricing is set by Safiery. Contact sales to discuss your account pricing.</p>' +
             '</aside>' +
           '</div>';
         root.querySelector("[data-logout]").addEventListener("click", function () { Store.logout(); Store.toast("Logged out — retail pricing restored"); render(); });

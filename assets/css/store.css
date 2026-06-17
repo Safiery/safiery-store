@@ -327,7 +327,7 @@ select.field { appearance: none; padding-right: 32px; background-image: url("dat
 
 /* ---------- trade banner ---------- */
 .trade-banner { border: 1px solid var(--brand-tint2); border-radius: var(--radius); background: var(--brand-tint); padding: 18px 22px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; color: var(--text); }
-.trade-banner svg { color: var(--brand); }
+.trade-banner svg { color: var(--brand); width: 40px; height: 40px; flex: none; }
 .trade-banner .tier-chip { font-family: var(--mono); font-size: 13px; padding: 8px 14px; border-radius: 100px; background: var(--brand); color: #fff; font-weight: 600; }
 
 /* ---------- cart ---------- */

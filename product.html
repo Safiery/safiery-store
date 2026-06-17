@@ -81,7 +81,7 @@
       var DL_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 21h14"/></svg>';
       function docsPanel() {
         if (!p.docs || !p.docs.length) {
-          return '<p class="muted">Product manuals and datasheets for this item are available on request — <a href="mailto:sales@safiery.com" style="color:var(--accent)">sales@safiery.com</a>. Trade accounts can access the full document library after login.</p>';
+          return '<p class="muted">Product manuals and datasheets for this item are available on request — <a href="mailto:sales@safiery.com" style="color:var(--accent)">sales@safiery.com</a>. Signed-in customers can access the full document library.</p>';
         }
         var items = p.docs.map(function (d) {
           return '<li><a class="doc-item" href="assets/docs/' + d.file + '" target="_blank" rel="noopener" download>' +
@@ -98,7 +98,7 @@
         var badges = (p.badges || []).map(function (b) { return '<span class="minibadge">' + Store.esc(b) + '</span>'; }).join("");
         var tradeBox = Store.isTrade() ? "" :
           '<div class="trade-cta-box">' + Store.icon("user") +
-          '<div style="flex:1"><strong>Trade or reseller?</strong> <span class="muted">Log in to see your tier price on this item.</span></div>' +
+          '<div style="flex:1"><strong>Have an account?</strong> <span class="muted">Log in to see your price on this item.</span></div>' +
           '<a class="btn btn-primary btn-sm" href="account.html">Log in</a></div>';
 
         // tab model (ARIA tablist)
