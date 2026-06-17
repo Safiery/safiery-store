@@ -42,6 +42,14 @@ function rateLimited(ip) {
 }
 
 /* --- catalog grounding context (built once per instance) --- */
+// Store-hosted PDFs live at /assets/docs/<file>; some docs may instead carry a full `url`.
+const DOCS_BASE = "https://safiery-store.netlify.app/assets/docs/";
+function docUrl(d) {
+  if (!d) return "";
+  if (d.url) return d.url;                // full/external URL wins (future-proof)
+  if (d.file) return DOCS_BASE + d.file;  // store-hosted PDF in /assets/docs/
+  return "";
+}
 function buildContext() {
   const gst = CATALOG.gstRate || 0.1;
   const catName = {};
@@ -51,11 +59,21 @@ function buildContext() {
     const cat = catName[(p.cats || [])[0]] || "";
     const badges = (p.badges || []).length ? " [" + p.badges.join(", ") + "]" : "";
     const price = p.variable ? ("from $" + p.price + " ex GST (quote-only)") : ("$" + p.price + " ex GST / $" + inc + " inc");
-    return "- " + p.name + " (" + cat + ", SKU " + (p.sku || p.id) + "): " + price + badges + (p.short ? " - " + p.short : "");
+    let line = "- " + p.name + " (" + cat + ", SKU " + (p.sku || p.id) + "): " + price + badges + (p.short ? " - " + p.short : "");
+    // Fuller technical grounding where the catalog has it (only some products carry desc/specs/docs).
+    if (p.desc && p.desc !== p.short) line += "\n    " + String(p.desc).replace(/\s+/g, " ").trim();
+    if (p.specs && typeof p.specs === "object") {
+      const specs = Object.keys(p.specs).map((k) => k + ": " + p.specs[k]).join("; ");
+      if (specs) line += "\n    Specs: " + specs;
+    }
+    const pdocs = (p.docs || []).map((d) => (d && d.title) ? (d.title + " (" + docUrl(d) + ")") : "").filter(Boolean);
+    if (pdocs.length) line += "\n    Docs: " + pdocs.join("; ");
+    return line;
   });
-  // Unique manuals/datasheets across the catalog (title -> url).
+  // Unique manuals/datasheets across the catalog (title -> url). Data carries `file` (not `url`);
+  // docUrl() resolves both, so these actually surface now (previously the d.url check left this empty).
   const docs = {};
-  (CATALOG.products || []).forEach((p) => (p.docs || []).forEach((d) => { if (d && d.url) docs[d.title || d.url] = d.url; }));
+  (CATALOG.products || []).forEach((p) => (p.docs || []).forEach((d) => { const u = docUrl(d); if (u) docs[(d && d.title) || u] = u; }));
   const docLines = Object.keys(docs).map((t) => "- " + t + ": " + docs[t]);
   return { lines: lines.join("\n"), docLines: docLines.join("\n"), count: lines.length };
 }
