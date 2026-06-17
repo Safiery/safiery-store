@@ -259,15 +259,17 @@
           '<button class="vc-btn" data-reset aria-label="Reset view"></button></div>';
         wireControls(m);
       }
-      document.querySelectorAll(".pillar-media[data-glb]").forEach(function (m) {
-        var glb = m.getAttribute("data-glb");
-        var poster = m.getAttribute("data-poster");
-        var img = m.querySelector("img");
-        var alt = img ? img.alt : "Safiery 3D model";
-        fetch(glb, { method: "HEAD" })
-          .then(function (r) { if (r.ok) mountViewer(m, glb, poster, alt); })
-          .catch(function () {});
-      });
+      Array.from(document.querySelectorAll(".pillar-media[data-glb]")).reduce(function (chain, m) {
+        return chain.then(function () {
+          var glb = m.getAttribute("data-glb");
+          var poster = m.getAttribute("data-poster");
+          var img = m.querySelector("img");
+          var alt = img ? img.alt : "Safiery 3D model";
+          return fetch(glb, { method: "HEAD" })
+            .then(function (r) { if (r.ok) mountViewer(m, glb, poster, alt); })
+            .catch(function () {});
+        });
+      }, Promise.resolve());
 
       // ---- scroll-reveal animation, pillar by pillar ----
       var pillars = document.querySelectorAll("[data-pillar]");
