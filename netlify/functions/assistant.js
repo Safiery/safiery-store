@@ -80,7 +80,28 @@ function buildContext() {
 let CTX = null;
 function ctx() { if (!CTX) CTX = buildContext(); return CTX; }
 
-function systemPrompt() {
+/* --- shared manuals registry from the ERP (#1b): the SAME merged set the email-agent
+   Outbox uses (ERP reference pages + the store PDFs), served by the store-documents
+   endpoint. Cached per warm instance; falls back to the catalog-derived list if the ERP
+   is unreachable, so manuals never disappear. --- */
+const ERP_BASE = (process.env.ERP_BASE_URL || "").replace(/\/+$/, "");
+const STORE_SECRET = process.env.STORE_SHARED_SECRET || "";
+let SHARED_DOCS; // undefined = not tried yet; string = lines; null = tried and failed
+async function sharedDocLines() {
+  if (SHARED_DOCS !== undefined) return SHARED_DOCS;
+  SHARED_DOCS = null;
+  if (!ERP_BASE || !STORE_SECRET) return SHARED_DOCS;
+  try {
+    const res = await fetch(ERP_BASE + "/.netlify/functions/store-documents", { headers: { "X-Store-Secret": STORE_SECRET } });
+    const j = await res.json().catch(() => null);
+    if (res.ok && j && Array.isArray(j.documents) && j.documents.length) {
+      SHARED_DOCS = j.documents.map((d) => "- " + d.title + ": " + d.url).join("\n");
+    }
+  } catch (_) { /* keep null -> catalog fallback */ }
+  return SHARED_DOCS;
+}
+
+function systemPrompt(manualsOverride) {
   const c = ctx();
   return [
     "You are the Safiery store assistant on safiery-store.netlify.app. Safiery makes marine and off-grid (4WD, caravan, marine) power, energy and digital-switching products so people travel without a generator.",
@@ -93,7 +114,7 @@ function systemPrompt() {
     c.lines,
     "",
     "MANUALS & DATASHEETS (link these when relevant):",
-    c.docLines || "(none listed)",
+    (manualsOverride || c.docLines) || "(none listed)",
     "",
     "Contact: sales@safiery.com, +61 (07) 210 22 55 3, 45/8 Distribution Court, Arundel QLD 4214."
   ].join("\n");
@@ -116,11 +137,11 @@ const LEAD_TOOL = {
   }
 };
 
-async function callClaude(apiKey, messages) {
+async function callClaude(apiKey, messages, manualsLines) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model: MODEL, max_tokens: MAX_TOKENS, system: systemPrompt(), tools: [LEAD_TOOL], messages })
+    body: JSON.stringify({ model: MODEL, max_tokens: MAX_TOKENS, system: systemPrompt(manualsLines), tools: [LEAD_TOOL], messages })
   });
   const text = await res.text();
   let parsed; try { parsed = JSON.parse(text); } catch (e) { throw new Error("Anthropic returned non-JSON"); }
@@ -175,11 +196,12 @@ exports.handler = async (event) => {
   const messages = sanitizeMessages(payload.messages);
   if (!messages.length) return json(400, { error: "no messages" });
   const page = typeof payload.page === "string" ? payload.page.slice(0, 200) : "";
+  const manualsLines = await sharedDocLines();
 
   try {
     let leadCaptured = false;
     let rounds = 0;
-    let resp = await callClaude(apiKey, messages);
+    let resp = await callClaude(apiKey, messages, manualsLines);
 
     while (resp.stop_reason === "tool_use" && rounds < MAX_TOOL_ROUNDS) {
       rounds++;
@@ -196,7 +218,7 @@ exports.handler = async (event) => {
         }
       }
       messages.push({ role: "user", content: results });
-      resp = await callClaude(apiKey, messages);
+      resp = await callClaude(apiKey, messages, manualsLines);
     }
 
     const textBlock = (resp.content || []).find((b) => b.type === "text");
