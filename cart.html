@@ -6,6 +6,10 @@
   <title>Cart — Safiery</title>
   <link rel="icon" type="image/png" href="assets/img/safiery-logo-2021.png">
   <link rel="stylesheet" href="assets/css/store.css?v=2">
+  <style>
+    /* Hide the account (person) icon from the header on the cart page only */
+    body[data-nav="cart.html"] .header-actions a[href="account.html"] { display: none; }
+  </style>
 </head>
 <body data-nav="cart.html">
   <header data-header></header>
