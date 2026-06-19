@@ -48,10 +48,10 @@
         } else if (Store.isTrade()) {
           // Signed in but no trade tier set yet - standard pricing (matches account.html).
           bannerEl.innerHTML = '<div class="notice" style="margin-bottom:24px; display:flex; gap:14px; align-items:center; flex-wrap:wrap">' +
-            Store.icon("user") + '<span style="flex:1">You\'re signed in' + (s && s.company ? ' as ' + Store.esc(s.company) : '') + '. Standard pricing applies on your account. <a href="mailto:sales@safiery.com?subject=Account%20pricing" style="color:var(--accent)">Contact sales</a> about account pricing.</span></div>';
+            '<span style="flex:1">You\'re signed in' + (s && s.company ? ' as ' + Store.esc(s.company) : '') + '. Standard pricing applies on your account. <a href="mailto:sales@safiery.com?subject=Account%20pricing" style="color:var(--accent)">Contact sales</a> about account pricing.</span></div>';
         } else {
           bannerEl.innerHTML = '<div class="notice" style="margin-bottom:24px; display:flex; gap:14px; align-items:center; flex-wrap:wrap">' +
-            Store.icon("user") + '<span style="flex:1">Have an account? <a href="account.html" style="color:var(--accent)">Log in</a> to apply your account pricing to this cart.</span></div>';
+            '<span style="flex:1">Have an account? <a href="account.html" style="color:var(--accent)">Log in</a> to apply your account pricing to this cart.</span></div>';
         }
       }
 
