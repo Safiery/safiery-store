@@ -15,6 +15,7 @@
 const CATALOG = require("../../data/catalog.js");
 let LINKS = {};
 try { LINKS = require("../../data/catalog-links.js").links || {}; } catch (e) { LINKS = {}; }
+const MERGE = require("../../data/catalog-merge.js");
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -50,6 +51,27 @@ async function erpPrices(items, token) {
   }
 }
 
+// Overlay the live ERP retail price (ex-GST) onto each trusted cart line, matched by
+// wooId, so the server charges the SAME retail base the storefront displayed (the store
+// now reads its catalogue from the same ERP store-catalog feed). Best-effort: if the feed
+// is unavailable the bundled catalog price stands. The client price is never trusted.
+async function applyErpRetail(cart) {
+  const base = (process.env.ERP_BASE_URL || "").replace(/\/+$/, "");
+  if (!base) return;
+  try {
+    const res = await fetch(base + "/.netlify/functions/store-catalog", { headers: { "Accept": "application/json" } });
+    if (!res.ok) return;
+    const feed = await res.json();
+    if (!feed || feed.ok === false) return;
+    const byWoo = MERGE.wooIndex(feed);
+    for (const c of cart) {
+      const wid = MERGE.normWooId(c.wooId);
+      const fp = wid ? byWoo[wid] : null;
+      if (fp && +fp.price > 0) c.rrp = round2(+fp.price);
+    }
+  } catch (e) { /* ERP feed down -> keep the bundled retail price */ }
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS, body: "" };
   if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed" });
@@ -79,6 +101,10 @@ exports.handler = async (event) => {
     cart.push({ storeId: p.id, sku: p.sku || p.id, name: p.name, rrp: round2(p.price), qty, wooId: link.wooId || null });
   }
   if (!cart.length) return json(400, { error: "No valid items in cart" });
+
+  // Retail base comes from the ERP catalogue feed (same source the storefront shows),
+  // so displayed retail == charged retail. B2B discount is then applied off this base.
+  await applyErpRetail(cart);
 
   // Authoritative B2B pricing from the ERP (falls back to retail when not logged in).
   let unit = cart.map((c) => c.rrp);   // default: retail RRP ex-GST

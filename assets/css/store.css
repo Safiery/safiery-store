@@ -250,6 +250,7 @@ body.trade .trade-pill { display: inline-flex; }
 .led.in_stock { background: var(--green); }
 .led.backorder { background: var(--amber); }
 .led.made_to_order { background: var(--brand); }
+.led.out_of_stock { background: var(--grey, #8C9198); }
 .pcard-body { padding: 16px 16px 18px; display: flex; flex-direction: column; flex: 1; }
 .pcard .pcat { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-mut); }
 .pcard h3 { font-size: 15.5px; font-weight: 600; font-family: var(--body); line-height: 1.3; margin: 7px 0 0; letter-spacing: 0; color: var(--text); }
