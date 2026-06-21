@@ -221,39 +221,52 @@ window.Store = (function () {
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true" class="' + (cls || "") + '">' + (ICONS[name] || "") + '</svg>';
   }
 
-  /* ---------------- generated product art ---------------- */
+  /* ---------------- generated product art (instrument schematic) ---------------- */
+  // Single brand accent (anodised orange) for power products; neutral grey for the
+  // small-parts categories — a meaningful split, not decoration.
+  var SIGNAL = "#ff5a1f", NEUTRAL = "#8b9099";
   var CAT_COLOR = {
-    "12v-lithium": "#3E78BD", "48v-lithium": "#2c5a91", "scotty": "#4a90c2",
-    "bmg": "#5b6470", "star-switching": "#3E78BD", "star-buttons": "#8c9198",
-    "tank": "#4a90c2", "cooktops": "#6b7787", "hot-water": "#3E78BD",
-    "jupiter": "#2c5a91", "accessories": "#8c9198"
+    "12v-lithium": SIGNAL, "48v-lithium": SIGNAL, "scotty": SIGNAL, "bmg": SIGNAL,
+    "star-switching": SIGNAL, "cooktops": SIGNAL, "hot-water": SIGNAL, "jupiter": SIGNAL,
+    "star-buttons": NEUTRAL, "tank": NEUTRAL, "accessories": NEUTRAL
   };
   function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
   function productArt(product) {
     var cat = category(product.cats[0]) || { glyph: "accessory", tag: "" };
-    var col = CAT_COLOR[product.cats[0]] || "#f6a623";
+    var col = CAT_COLOR[product.cats[0]] || SIGNAL;
     var glyph = ICONS[cat.glyph] || ICONS.accessory;
-    var tag = (product.sku || cat.tag || "").toUpperCase();
+    var sku = (product.sku || cat.tag || "").toUpperCase();
+    var tag = (cat.tag || "").toUpperCase();
+    // four corner registration brackets (technical-drawing marks)
+    var t = 14, a = 13; // inset, arm length
+    var ticks = [
+      [t, t, t + a, t], [t, t, t, t + a],                                   // TL
+      [400 - t, t, 400 - t - a, t], [400 - t, t, 400 - t, t + a],            // TR
+      [t, 300 - t, t + a, 300 - t], [t, 300 - t, t, 300 - t - a],            // BL
+      [400 - t, 300 - t, 400 - t - a, 300 - t], [400 - t, 300 - t, 400 - t, 300 - t - a] // BR
+    ].map(function (l) { return '<line x1="' + l[0] + '" y1="' + l[1] + '" x2="' + l[2] + '" y2="' + l[3] + '" stroke="#3a3f47" stroke-width="1"/>'; }).join("");
     var svg =
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">' +
         '<defs>' +
           '<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">' +
-            '<stop offset="0" stop-color="#f6f9fc"/><stop offset="1" stop-color="#e6edf4"/>' +
+            '<stop offset="0" stop-color="#16181c"/><stop offset="1" stop-color="#0f1115"/>' +
           '</linearGradient>' +
-          '<radialGradient id="gl" cx="50%" cy="42%" r="55%">' +
-            '<stop offset="0" stop-color="' + col + '" stop-opacity="0.22"/>' +
+          '<radialGradient id="gl" cx="50%" cy="42%" r="58%">' +
+            '<stop offset="0" stop-color="' + col + '" stop-opacity="0.26"/>' +
             '<stop offset="1" stop-color="' + col + '" stop-opacity="0"/>' +
           '</radialGradient>' +
-          '<pattern id="grid" width="26" height="26" patternUnits="userSpaceOnUse">' +
-            '<path d="M26 0H0V26" fill="none" stroke="#1b2a3f" stroke-opacity="0.05" stroke-width="1"/>' +
+          '<pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">' +
+            '<path d="M24 0H0V24" fill="none" stroke="#8b9099" stroke-opacity="0.06" stroke-width="1"/>' +
           '</pattern>' +
         '</defs>' +
         '<rect width="400" height="300" fill="url(#bg)"/>' +
         '<rect width="400" height="300" fill="url(#grid)"/>' +
         '<rect width="400" height="300" fill="url(#gl)"/>' +
-        '<g transform="translate(150 75) scale(4.2)" fill="none" stroke="' + col + '" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">' + glyph + '</g>' +
-        '<text x="20" y="280" fill="' + col + '" font-family="IBM Plex Mono, monospace" font-size="13" letter-spacing="1.5">' + esc(tag) + '</text>' +
-        '<text x="380" y="280" text-anchor="end" fill="#9aa3ad" font-family="IBM Plex Mono, monospace" font-size="11" letter-spacing="2">SAFIERY</text>' +
+        ticks +
+        '<g transform="translate(150 76) scale(4.2)" fill="none" stroke="' + col + '" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">' + glyph + '</g>' +
+        (tag ? '<text x="22" y="34" fill="' + col + '" font-family="IBM Plex Mono, monospace" font-size="11" letter-spacing="2.5">' + esc(tag) + '</text>' : '') +
+        '<text x="22" y="282" fill="#8b9099" font-family="IBM Plex Mono, monospace" font-size="12" letter-spacing="1">' + esc(sku) + '</text>' +
+        '<text x="378" y="282" text-anchor="end" fill="#52575f" font-family="IBM Plex Mono, monospace" font-size="10" letter-spacing="3">SAFIERY</text>' +
       '</svg>';
     return "data:image/svg+xml," + encodeURIComponent(svg);
   }
@@ -340,6 +353,10 @@ window.Store = (function () {
     }).join("");
     return '' +
     '<a class="skip-link" href="#main">Skip to content</a>' +
+    '<div class="topstrip"><div class="wrap">' +
+      '<span><span class="dot"></span>Safiery <span class="sig">&#9670;</span> Marine · RV · Off-grid power systems</span>' +
+      '<span class="hide-sm">AUD · ex-GST · Ships from Arundel QLD</span>' +
+    '</div></div>' +
     '<div class="header-main"><div class="wrap">' +
       '<a class="brand" href="index.html" aria-label="Safiery — home"><img class="brand-logo" src="assets/img/safiery-logo.webp" alt="Safiery" width="350" height="293"></a>' +
       '<nav class="nav" aria-label="Primary">' + navlinks + '</nav>' +
