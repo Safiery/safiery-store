@@ -5,6 +5,7 @@
   "description": "Safiery B2C + B2B ecommerce storefront — static site with Stripe checkout via Netlify Functions",
   "scripts": {
     "dev": "npx netlify-cli@latest dev",
+    "test": "node --test test/*.test.js",
     "deploy": "npx netlify-cli@latest deploy",
     "deploy:prod": "npx netlify-cli@latest deploy --prod"
   },

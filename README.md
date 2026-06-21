@@ -17,9 +17,10 @@ safiery-store/
 ├── account.html             Trade login → tier pricing dashboard
 ├── checkout-success.html    Stripe return (clears cart)
 ├── checkout-cancel.html     Stripe return
-├── data/catalog.js          ← single source of truth for products + tiers
+├── data/catalog.js          Curated OVERLAY + offline fallback (categories, specs, badges, featured, docs, ids)
+├── data/catalog-merge.js    Pure merge: ERP store-catalog feed → overlaid onto the curated set by wooId
 ├── assets/css/store.css      Design system (instrument-panel / marine-tech)
-├── assets/js/store.js        Engine: pricing, cart, auth, render, Stripe call
+├── assets/js/store.js        Engine: ERP catalogue load, pricing, cart, auth, render, Stripe call
 ├── netlify/functions/create-checkout-session.js   Stripe session (server-priced)
 ├── netlify/functions/verify-session.js             Confirms payment before clearing cart
 ├── netlify.toml · package.json · .env.example
@@ -34,9 +35,17 @@ cp .env.example .env        # then paste your Stripe TEST secret key
 npm run dev                 # netlify dev → http://localhost:8888
 ```
 
-> The catalogue is a UMD module (`data/catalog.js`), so the pages work even if you
-> just double-click `index.html`. **Stripe checkout** only works under `netlify dev`
-> or a deploy, because it needs the serverless function.
+> **Catalogue source.** Products, prices, stock and photos come live from the ERP
+> (Quasar HQ `store-catalog` feed); `data/catalog.js` is the curated overlay (categories,
+> specs, badges, featured selection, datasheet docs, `variable`/POA flags) AND the offline
+> fallback. The pages fetch the feed at load (`Store.ready()`), overlay it onto the curated
+> set by `wooId` (`data/catalog-merge.js`), and fall back to the bundled catalogue if the
+> feed is unavailable — so the store always renders, even double-clicked from disk. Note: a
+> brand-new product added in Woo appears once it is added to the curated overlay (deliberate
+> for a curated storefront). **Stripe checkout** only works under `netlify dev` or a deploy.
+>
+> Tests: `npm test` (the pure merge). The live ERP path needs the `store-catalog` endpoint
+> deployed (Quasar HQ PR) + the store origin in the ERP `CORS_ALLOW_ORIGIN` allowlist.
 
 ## Deploy to Netlify
 

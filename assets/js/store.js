@@ -20,9 +20,14 @@ window.Store = (function () {
   // Store product id -> ERP catalog link ({wooId, wooCategory, confidence}). Generated
   // by the catalog reconciliation; include data/catalog-links.js before store.js.
   var LINKS = (window.SAFIERY_CATALOG_LINKS && window.SAFIERY_CATALOG_LINKS.links) || {};
+  // Pure merge helper (data/catalog-merge.js) - overlays the live ERP feed onto the
+  // curated static catalogue by wooId. Include catalog-merge.js before store.js.
+  var MERGE = window.SAFIERY_CATALOG_MERGE;
 
   /* ---------------- lookups ---------------- */
-  var prodIndex = {}; C.products.forEach(function (p) { prodIndex[p.id] = p; });
+  var prodIndex = {};
+  function rebuildIndex() { prodIndex = {}; C.products.forEach(function (p) { prodIndex[p.id] = p; }); }
+  rebuildIndex();
   var catIndex = {};  C.categories.forEach(function (c) { catIndex[c.id] = c; });
   // NB: B2B tiers are now resolved by the ERP (not from C.b2bTiers); tier()/pricing()
   // read the cached ERP price map. C.b2bTiers/demoAccounts in the catalog are legacy.
@@ -32,6 +37,45 @@ window.Store = (function () {
   function productsIn(catId) { return C.products.filter(function (p) { return p.cats.indexOf(catId) !== -1; }); }
   function categoryCount(catId) { return productsIn(catId).length; }
   function featured() { return C.products.filter(function (p) { return p.featured; }); }
+
+  /* ---------------- catalogue source (ERP feed -> overlay onto static) ---------------- */
+  // The bundled static catalogue is the curated overlay AND the offline fallback. On load
+  // we fetch the ERP `store-catalog` feed and overlay the live name/price/stock/images/desc
+  // by wooId (data/catalog-merge.js). If the feed is unavailable the static catalogue
+  // stands, so the store always renders. Pages await Store.ready() before rendering product
+  // data so they never paint stale prices/photos before the overlay lands.
+  var _readyDone = false, _readyResolve;
+  var _ready = new Promise(function (res) { _readyResolve = res; });
+  function _finishReady() { if (!_readyDone) { _readyDone = true; _readyResolve(true); } }
+
+  function applyFeed(feed) {
+    if (!MERGE || !feed || feed.ok === false || !Array.isArray(feed.products)) return false;
+    var merged = MERGE.mergeCatalog(C.products, feed, LINKS);
+    // Mutate C.products in place so the exported Store.catalog / Store.categories
+    // references already held by a page stay valid; then rebuild the id index.
+    C.products.length = 0;
+    for (var i = 0; i < merged.length; i++) C.products.push(merged[i]);
+    rebuildIndex();
+    return true;
+  }
+
+  function loadCatalog() {
+    // Bounded so a slow/hung ERP can never block the storefront: on timeout or error we
+    // resolve ready() with the static fallback (already in place) and the store renders.
+    var timeout = new Promise(function (res) { setTimeout(function () { res(null); }, 4000); });
+    var fetchP = fetch(ERP_BASE + "/.netlify/functions/store-catalog", { headers: { "Accept": "application/json" } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; });
+    return Promise.race([fetchP, timeout]).then(function (feed) {
+      try {
+        if (applyFeed(feed)) emit("catalog:change");
+        else console.info("[store] ERP catalogue feed unavailable - using the bundled catalogue.");
+      } catch (e) { console.warn("[store] catalogue merge failed, using bundled catalogue:", e && e.message); }
+      _finishReady();
+      return true;
+    });
+  }
+  function ready() { return _ready; }
 
   /* ---------------- money ---------------- */
   function formatAUD(n) {
@@ -257,6 +301,12 @@ window.Store = (function () {
       '</svg>';
     return "data:image/svg+xml," + encodeURIComponent(svg);
   }
+  // Real ERP product photo when present (overlaid from the feed), else the generated
+  // SVG art so a product without a photo still renders cleanly.
+  function productImage(product) {
+    var img = product && product.images && product.images[0];
+    return (img && img.src) ? img.src : productArt(product);
+  }
 
   /* ---------------- price + card HTML ---------------- */
   var CUR = '<span class="cur">AUD</span>';
@@ -279,7 +329,7 @@ window.Store = (function () {
     return html;
   }
 
-  var STOCK_LABEL = { in_stock: "In stock", backorder: "Backorder", made_to_order: "Made to order" };
+  var STOCK_LABEL = { in_stock: "In stock", backorder: "Backorder", made_to_order: "Made to order", out_of_stock: "Out of stock" };
   function productCard(product) {
     var pr = pricing(product);
     var cat = category(product.cats[0]);
@@ -290,7 +340,7 @@ window.Store = (function () {
     return '' +
       '<article class="pcard">' +
         '<a class="pcard-img" href="product.html?id=' + product.id + '" aria-label="' + esc(product.name) + '">' +
-          '<img src="' + productArt(product) + '" alt="' + esc(product.name) + '" loading="lazy">' +
+          '<img src="' + productImage(product) + '" alt="' + esc(product.name) + '" loading="lazy">' +
           (flags ? '<div class="pcard-flags">' + flags + '</div>' : "") +
           '<span class="stock-led"><span class="led ' + product.stock + '"></span>' + (STOCK_LABEL[product.stock] || "") + '</span>' +
         '</a>' +
@@ -478,6 +528,7 @@ window.Store = (function () {
   /* ---------------- boot ---------------- */
   function init() {
     syncTradeMode();
+    loadCatalog();   // start the ERP catalogue fetch immediately (resolves Store.ready())
     document.addEventListener("DOMContentLoaded", function () {
       mountChrome(); wireGlobal();
     });
@@ -489,7 +540,8 @@ window.Store = (function () {
     catalog: C, byId: byId, category: category, categories: C.categories,
     productsIn: productsIn, categoryCount: categoryCount, featured: featured,
     formatAUD: formatAUD, round2: round2, esc: esc, icon: icon,
-    pricing: pricing, priceHTML: priceHTML, productCard: productCard, renderGrid: renderGrid, productArt: productArt,
+    pricing: pricing, priceHTML: priceHTML, productCard: productCard, renderGrid: renderGrid,
+    productArt: productArt, productImage: productImage, ready: ready,
     getSession: getSession, tier: tier, isTrade: isTrade, logout: logout,
     requestLogin: requestLogin, verifyLogin: verifyLogin, fetchPrices: fetchPrices, priceMap: priceMap,
     cartItems: cartItems, cartCount: cartCount, cartTotals: cartTotals,

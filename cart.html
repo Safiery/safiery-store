@@ -26,6 +26,7 @@
 
   <script src="data/catalog.js"></script>
   <script src="data/catalog-links.js"></script>
+  <script src="data/catalog-merge.js"></script>
   <script src="assets/js/store.js?v=2"></script>
   <script src="assets/js/assistant.js" defer></script>
   <script>
@@ -61,7 +62,7 @@
           ? '<span class="mono b2b">' + Store.formatAUD(pr.effective) + '</span> <span class="mono" style="color:var(--text-mut);text-decoration:line-through;font-size:12px">' + Store.formatAUD(pr.base) + '</span>'
           : '<span class="mono">' + Store.formatAUD(pr.effective) + '</span>';
         return '<div class="cart-line" data-id="' + p.id + '">' +
-          '<a class="thumb" href="product.html?id=' + p.id + '"><img src="' + Store.productArt(p) + '" alt=""></a>' +
+          '<a class="thumb" href="product.html?id=' + p.id + '"><img src="' + Store.productImage(p) + '" alt=""></a>' +
           '<div><h4><a href="product.html?id=' + p.id + '">' + Store.esc(p.name) + '</a></h4>' +
             '<div class="ln-mini">' + (p.sku || "") + ' · ' + unit + ' ea (ex GST)</div>' +
             '<div class="qty sm" style="margin-top:10px"><button data-dec aria-label="Decrease quantity">−</button><input type="number" value="' + it.qty + '" min="1" data-qtyin aria-label="Quantity"><button data-inc aria-label="Increase quantity">+</button></div>' +
@@ -116,7 +117,7 @@
         if (q) q.addEventListener("click", function () { Store.toast("Quote request sent to sales — they'll confirm freight & lead time"); });
       }
       window.__pageRerender = render;
-      render();
+      Store.ready().then(render);
     })();
   </script>
 </body>
