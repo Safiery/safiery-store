@@ -246,6 +246,7 @@ window.Store = (function () {
     tank: '<path d="M5 8a7 3 0 0 1 14 0v8a7 3 0 0 1-14 0z"/><path d="M5 12a7 3 0 0 0 14 0"/>',
     cooktop: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="2.5"/><circle cx="15.5" cy="15.5" r="2.5"/>',
     water: '<path d="M12 3s6 6.5 6 10.5A6 6 0 0 1 6 13.5C6 9.5 12 3 12 3z"/>',
+    induction: '<rect x="3" y="10" width="18" height="11" rx="2"/><circle cx="12" cy="15.5" r="2.8"/><path d="M8 7c0-1.2 1-1.6 1-2.8M12 7c0-1.2 1-1.6 1-2.8M16 7c0-1.2 1-1.6 1-2.8"/>',
     pack: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6M9 15h3"/>',
     accessory: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>',
     cart: '<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.4 12.5a1 1 0 0 0 1 .8h8.8a1 1 0 0 0 1-.8L21 7H6"/>',
@@ -269,7 +270,7 @@ window.Store = (function () {
   var CAT_COLOR = {
     "12v-lithium": "#3E78BD", "48v-lithium": "#2c5a91", "scotty": "#4a90c2",
     "bmg": "#5b6470", "star-switching": "#3E78BD", "star-buttons": "#8c9198",
-    "tank": "#4a90c2", "cooktops": "#6b7787", "hot-water": "#3E78BD",
+    "tank": "#4a90c2", "induction-hotwater": "#3E78BD",
     "jupiter": "#2c5a91", "accessories": "#8c9198"
   };
   function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
@@ -377,6 +378,7 @@ window.Store = (function () {
   /* ---------------- header / footer ---------------- */
   var NAV = [
     { href: "shop.html", label: "Shop" },
+    { href: "shop.html?cat=induction-hotwater", label: "Induction & Hot Water" },
     { href: "shop.html?cat=12v-lithium", label: "Batteries" },
     { href: "shop.html?cat=scotty", label: "Scotty AI" },
     { href: "shop.html?cat=bmg", label: "BMG" },

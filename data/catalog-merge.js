@@ -4,7 +4,7 @@
  * Approach A: the storefront catalogue, product data, pricing and photos come from
  * the ERP (Quasar HQ `store-catalog` feed), while the curated storefront is kept as a
  * thin local OVERLAY. The static `data/catalog.js` defines the SET, the stable product
- * `id`, the 11 curated categories, and the curated extras Woo does not hold (specs,
+ * `id`, the 10 curated categories, and the curated extras Woo does not hold (specs,
  * badges, featured selection, datasheet docs, the `variable`/POA flag). The ERP feed,
  * matched by `wooId`, overlays the LIVE fields: { name, price, stock, images, short, desc }.
  *

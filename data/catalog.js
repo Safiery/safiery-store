@@ -39,6 +39,8 @@
 
   // ---- Categories -----------------------------------------------------------
   var categories = [
+    { id: "induction-hotwater", name: "Induction & Hot Water", glyph: "induction", tag: "GALLEY",
+      blurb: "Genset-free galley power — no-pulsing induction cooktops and electric tank & instant hot water, all engineered to run on a 2000W inverter." },
     { id: "12v-lithium",     name: "12V Lithium Batteries",  glyph: "battery", tag: "12V",
       blurb: "Solid-state 12V lithium with 10,000-cycle life and the safest chemistry available." },
     { id: "48v-lithium",     name: "48V Lithium Batteries",  glyph: "battery", tag: "48V",
@@ -53,10 +55,6 @@
       blurb: "Interchangeable engraved icon buttons for STAR keypads." },
     { id: "tank",            name: "Tank Monitoring",        glyph: "tank", tag: "SENSE",
       blurb: "Radar, pressure and resistive tank sensors for fuel, water, LPG and waste." },
-    { id: "cooktops",        name: "Smart Induction Cooktops", glyph: "cooktop", tag: "COOK",
-      blurb: "No-pulsing induction hobs engineered to run on a 2000W inverter." },
-    { id: "hot-water",       name: "Electric Hot Water",     glyph: "water", tag: "HOT",
-      blurb: "Tank and instant electric hot water — genset-free hot showers." },
     { id: "jupiter",         name: "Jupiter Canopy Packs",   glyph: "pack", tag: "PACK",
       blurb: "Upright all-in-one power packs: inverter, DC-DC, switching and lithium." },
     { id: "accessories",     name: "Accessories",            glyph: "accessory", tag: "ADD",
@@ -350,39 +348,39 @@
       price: 289.19, cats: ["tank"], stock: "in_stock", badges: ["3 Tanks"],
       short: "Interface for up to three tank senders — sender arm or tank plugs." },
 
-    // --- Smart Induction Cooktops ------------------------------------------
+    // --- Induction & Hot Water · Induction Cooktops ------------------------
     { id: "cooktop-single", sku: "COOK-1HOB", name: "Safiery Induction Single Hob Cooktop — suits 2000W inverter (no pulsing)",
-      price: 249.00, listPrice: 329.00, sale: true, cats: ["cooktops"], featured: false, stock: "in_stock",
+      price: 249.00, listPrice: 329.00, sale: true, cats: ["induction-hotwater"], featured: false, stock: "in_stock",
       badges: ["2000W", "No Pulsing", "Sale"],
       short: "Single-hob induction cooktop with smooth power and no pulsing — runs cleanly on a 2000W inverter." },
     { id: "cooktop-dual", sku: "COOK-2HOB", name: "Safiery Induction Dual Hob Cooktop — suits 2000W inverter (no pulsing)",
-      price: 640.00, listPrice: 899.00, sale: true, cats: ["cooktops"], featured: true, stock: "in_stock",
+      price: 640.00, listPrice: 899.00, sale: true, cats: ["induction-hotwater"], featured: true, stock: "in_stock",
       badges: ["1800W+1300W", "Schott Ceran", "Sale"],
       short: "Dual-hob induction (1800W + 1300W, limited to 2000W overall) on a 10A plug, with a Schott Ceran crystal top. No pulsing." },
     { id: "cooktop-usa-dual", sku: "COOK-USA-2HOB", name: "Safiery USA Dual Hob Induction Cooktop — 1400W + 1400W, 110V, RV-Safe",
-      price: 635.00, listPrice: 890.00, sale: true, cats: ["cooktops"], stock: "in_stock",
+      price: 635.00, listPrice: 890.00, sale: true, cats: ["induction-hotwater"], stock: "in_stock",
       badges: ["1400W×2", "110V", "Sale"],
       short: "Built-in dual induction for 110V markets — 1400W + 1400W to 2000W max, RV-safe, no pulsing." },
 
-    // --- Electric Hot Water ------------------------------------------------
+    // --- Induction & Hot Water · Electric Hot Water ------------------------
     { id: "hw-12v-8l", sku: "HW-12V-8L", name: "12V Hot Water Tank System 8L 30A — 400W to 70°C",
-      price: 490.00, cats: ["hot-water"], stock: "in_stock", badges: ["12V", "8L", "400W"],
+      price: 490.00, cats: ["induction-hotwater"], stock: "in_stock", badges: ["12V", "8L", "400W"],
       short: "8L 12V hot water tank, 30A / 400W element heating to 70°C." },
     { id: "hw-48v-8l", sku: "HW-48V-8L", name: "48V Hot Water Tank System 8L 1,000W",
-      price: 390.00, cats: ["hot-water"], stock: "in_stock", badges: ["48V", "8L", "1000W"],
+      price: 390.00, cats: ["induction-hotwater"], stock: "in_stock", badges: ["48V", "8L", "1000W"],
       short: "8L 48V hot water tank with a 1,000W element for fast recovery." },
     { id: "hw-combo", sku: "HW-COMBO", name: "All-Electric Combo Hot Water — 8L Tank + Instant",
-      price: 880.00, cats: ["hot-water"], featured: false, stock: "in_stock", badges: ["8L + Instant"],
+      price: 880.00, cats: ["induction-hotwater"], featured: false, stock: "in_stock", badges: ["8L + Instant"],
       short: "Combination system: an 8L electric tank plus an instant electric booster for continuous hot water." },
     { id: "hw-instant", sku: "HW-INSTANT", name: "Safiery Instant 3000-6000W Hot Water System (no tank)",
-      price: 480.00, listPrice: 590.00, sale: true, cats: ["hot-water"], stock: "in_stock",
+      price: 480.00, listPrice: 590.00, sale: true, cats: ["induction-hotwater"], stock: "in_stock",
       badges: ["3-6kW", "Tankless", "Sale"],
       short: "Tankless instant electric hot water, 3000–6000W — no tank needed." },
     { id: "hw-steibel-10l", sku: "HW-STB-10L", name: "Stiebel Electric Fast-Heating Compact 10L Hot Water System",
-      price: 459.00, cats: ["hot-water"], stock: "in_stock", badges: ["10L", "Compact"],
+      price: 459.00, cats: ["induction-hotwater"], stock: "in_stock", badges: ["10L", "Compact"],
       short: "Stiebel Eltron fast-heating compact 10L electric hot water system." },
     { id: "hw-steibel-15l", sku: "HW-STB-15L", name: "Stiebel Electric Fast-Heating Compact 15L Hot Water System",
-      price: 560.00, cats: ["hot-water"], stock: "in_stock", badges: ["15L", "Compact"],
+      price: 560.00, cats: ["induction-hotwater"], stock: "in_stock", badges: ["15L", "Compact"],
       short: "Stiebel Eltron fast-heating compact 15L electric hot water system." },
 
     // --- Jupiter Canopy Upright Packs --------------------------------------
