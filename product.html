@@ -86,7 +86,7 @@
           return '<p class="muted">Product manuals and datasheets for this item are available on request — <a href="mailto:sales@safiery.com" style="color:var(--accent)">sales@safiery.com</a>. Signed-in customers can access the full document library.</p>';
         }
         var items = p.docs.map(function (d) {
-          return '<li><a class="doc-item" href="assets/docs/' + d.file + '" target="_blank" rel="noopener" download>' +
+          return '<li><a class="doc-item" href="' + (d.url || ('assets/docs/' + d.file)) + '" target="_blank" rel="noopener" download>' +
             '<span class="doc-ico">' + DOC_SVG + '</span>' +
             '<span class="doc-meta"><span class="doc-title">' + Store.esc(d.title) + '</span>' +
             '<span class="doc-sub">' + (DOC_TYPE[d.type] || "Document") + ' · PDF</span></span>' +
