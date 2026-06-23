@@ -38,6 +38,21 @@
     return by;
   }
 
+  // Normalise a SKU for matching: trimmed + lower-cased (or null).
+  function normSku(v) { var s = (v == null) ? '' : String(v).trim().toLowerCase(); return s || null; }
+
+  // Index an ERP feed by normalised SKU. SKU is the stable join key now that
+  // WooCommerce is retired (the ERP feed is sourced from the HQ products master).
+  function skuIndex(feed) {
+    var by = {};
+    var items = (feed && Array.isArray(feed.products)) ? feed.products : [];
+    for (var i = 0; i < items.length; i++) {
+      var k = normSku(items[i] && items[i].sku);
+      if (k && !by[k]) by[k] = items[i];
+    }
+    return by;
+  }
+
   // Overlay one ERP feed product (fp) onto one static product (sp). Returns a NEW
   // object; the static product is never mutated. With no feed match, returns sp as-is.
   function overlay(sp, fp) {
@@ -70,23 +85,30 @@
     return m;
   }
 
-  // Merge the full static set against an ERP feed. `links` maps a static product id to
-  // its ERP catalog link ({ wooId }); when absent we also try the product's own wooId.
+  // Merge the full static set against an ERP feed. Matches each curated product to its
+  // feed row by SKU first (the stable join key), then falls back to wooId (via the
+  // `links` map id->{wooId}, or the product's own wooId) for any legacy/unmastered row.
   // Order, ids, count and every curated field are preserved - only the live fields move.
   function mergeCatalog(staticProducts, feed, links) {
-    var by = wooIndex(feed);
+    var byWoo = wooIndex(feed);
+    var bySku = skuIndex(feed);
     links = links || {};
     return (staticProducts || []).map(function (sp) {
-      var link = links[sp.id];
-      var wid = link ? normWooId(link.wooId) : normWooId(sp.wooId);
-      var fp = wid ? by[wid] : null;
+      var fp = sp.sku ? (bySku[normSku(sp.sku)] || null) : null;   // SKU is the primary join
+      if (!fp) {
+        var link = links[sp.id];
+        var wid = link ? normWooId(link.wooId) : normWooId(sp.wooId);
+        fp = wid ? byWoo[wid] : null;
+      }
       return overlay(sp, fp);
     });
   }
 
   return {
     normWooId: normWooId,
+    normSku: normSku,
     wooIndex: wooIndex,
+    skuIndex: skuIndex,
     overlay: overlay,
     mergeCatalog: mergeCatalog
   };

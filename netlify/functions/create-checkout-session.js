@@ -64,9 +64,10 @@ async function applyErpRetail(cart) {
     const feed = await res.json();
     if (!feed || feed.ok === false) return;
     const byWoo = MERGE.wooIndex(feed);
+    const bySku = MERGE.skuIndex(feed);
     for (const c of cart) {
-      const wid = MERGE.normWooId(c.wooId);
-      const fp = wid ? byWoo[wid] : null;
+      let fp = c.sku ? (bySku[MERGE.normSku(c.sku)] || null) : null;   // SKU is the primary join
+      if (!fp) { const wid = MERGE.normWooId(c.wooId); fp = wid ? byWoo[wid] : null; }
       if (fp && +fp.price > 0) c.rrp = round2(+fp.price);
     }
   } catch (e) { /* ERP feed down -> keep the bundled retail price */ }

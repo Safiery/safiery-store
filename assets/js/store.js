@@ -133,8 +133,10 @@ window.Store = (function () {
     C.products.forEach(function (p) {
       if (p.variable) return;
       var link = LINKS[p.id];
-      if (!link || !link.wooId) return;          // unlinked product -> retail only
-      items.push({ storeId: p.id, wooId: link.wooId, sku: p.sku, rrp: p.price, qty: 1 });
+      // Price any product with a SKU (resolve-prices joins by SKU now); fall back to a
+      // legacy wooId link. Without either there is no way to resolve a tier price.
+      if (!p.sku && !(link && link.wooId)) return;   // unpriceable -> retail only
+      items.push({ storeId: p.id, wooId: link ? link.wooId : null, sku: p.sku, rrp: p.price, qty: 1 });
     });
     if (!items.length) return Promise.resolve(false);
     return fetch(ERP_BASE + "/.netlify/functions/resolve-prices", {
