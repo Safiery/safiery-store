@@ -6,7 +6,7 @@
   <title>News — Safiery</title>
   <meta name="description" content="The latest from Safiery: product launches, open marine operating systems, energy architecture and company news.">
   <link rel="icon" type="image/png" href="assets/img/safiery-logo-2021.png">
-  <link rel="stylesheet" href="assets/css/store.css?v=2">
+  <link rel="stylesheet" href="assets/css/store.css?v=3">
 </head>
 <body data-nav="news.html">
   <header data-header></header>
@@ -22,6 +22,24 @@
     </div>
   </div></main>
 
+  <!-- Article modal: the tile shows a summary; clicking it opens the full article here. -->
+  <div class="news-modal" data-news-modal hidden>
+    <div class="news-modal-scrim" data-news-close></div>
+    <div class="news-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="nm-title" tabindex="-1">
+      <button class="news-modal-close" type="button" data-news-close aria-label="Close article">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <div class="news-modal-media" data-nm-media></div>
+      <div class="news-modal-body">
+        <div class="news-date" data-nm-date></div>
+        <h2 class="news-modal-title" id="nm-title" data-nm-title></h2>
+        <div class="news-tags" data-nm-tags></div>
+        <div class="news-article" data-nm-article></div>
+        <a class="news-more" data-nm-link target="_blank" rel="noopener" hidden>Read more →</a>
+      </div>
+    </div>
+  </div>
+
   <footer data-footer></footer>
 
   <script src="data/catalog.js"></script>
@@ -34,6 +52,7 @@
       // window.SAFIERY_ERP_BASE before this script if it ever changes.
       var ERP_BASE = (window.SAFIERY_ERP_BASE || "https://quasar-safiery-967.netlify.app").replace(/\/+$/, "");
       var grid = document.querySelector("[data-news]");
+      var ITEMS = [];
 
       function esc(s) { var d = document.createElement("div"); d.textContent = String(s == null ? "" : s); return d.innerHTML; }
       function fmtDate(d) {
@@ -42,31 +61,91 @@
         catch (e) { return ""; }
       }
       function status(msg) { grid.innerHTML = '<p class="news-status">' + esc(msg) + "</p>"; }
+      function tagsHtml(n) {
+        return (n.tags || []).map(function (t) { return '<span class="news-tag">' + esc(t) + "</span>"; }).join("");
+      }
+      // Plain-text body → paragraphs: blank lines split paragraphs, single newlines become <br>.
+      function paragraphs(text) {
+        return String(text || "").split(/\n{2,}/).map(function (p) {
+          var t = p.trim();
+          if (!t) return "";
+          return "<p>" + esc(t).replace(/\n/g, "<br>") + "</p>";
+        }).join("");
+      }
 
-      function card(n) {
-        var tags = (n.tags || []).map(function (t) { return '<span class="news-tag">' + esc(t) + "</span>"; }).join("");
+      // ── tile (summary only) ──────────────────────────────────────────────────
+      function card(n, i) {
+        var tags = tagsHtml(n);
         var media = n.image ? '<div class="news-media"><img src="' + esc(n.image) + '" alt="' + esc(n.title) + '" loading="lazy"></div>' : "";
         var lead = n.summary || n.body || "";
-        var body = (n.body && n.body !== n.summary) ? '<p class="news-body">' + esc(n.body) + "</p>" : "";
-        var more = n.link ? '<a class="news-more" href="' + esc(n.link) + '" target="_blank" rel="noopener">Read more →</a>' : "";
-        return '<article class="news-card">' +
+        return '<article class="news-card" data-idx="' + i + '" role="button" tabindex="0" aria-haspopup="dialog">' +
             media +
             '<div class="news-card-body">' +
               '<div class="news-date">' + esc(fmtDate(n.date)) + "</div>" +
               '<h3 class="news-title">' + esc(n.title) + "</h3>" +
               (tags ? '<div class="news-tags">' + tags + "</div>" : "") +
               (lead ? '<p class="news-excerpt">' + esc(lead) + "</p>" : "") +
-              body +
-              more +
+              '<span class="news-more news-more-cue">Read article →</span>' +
             "</div>" +
           "</article>";
       }
 
       function render(items) {
         if (!items || !items.length) { status("No news yet — check back soon."); return; }
+        ITEMS = items;
         grid.innerHTML = items.map(card).join("");
       }
 
+      // ── article modal ────────────────────────────────────────────────────────
+      var modal = document.querySelector("[data-news-modal]");
+      var dialog = modal.querySelector(".news-modal-dialog");
+      var lastFocus = null;
+
+      function openModal(n) {
+        modal.querySelector("[data-nm-date]").textContent = fmtDate(n.date);
+        modal.querySelector("[data-nm-title]").textContent = n.title || "";
+        modal.querySelector("[data-nm-tags]").innerHTML = tagsHtml(n);
+        modal.querySelector("[data-nm-media]").innerHTML = n.image
+          ? '<img src="' + esc(n.image) + '" alt="' + esc(n.title) + '">' : "";
+        var article = n.body || n.summary || "";
+        modal.querySelector("[data-nm-article]").innerHTML = paragraphs(article);
+        var link = modal.querySelector("[data-nm-link]");
+        if (n.link) { link.href = n.link; link.hidden = false; } else { link.removeAttribute("href"); link.hidden = true; }
+
+        lastFocus = document.activeElement;
+        modal.hidden = false;
+        document.body.classList.add("news-modal-open");
+        // focus the dialog after it is shown so screen readers announce it
+        requestAnimationFrame(function () { dialog.focus(); dialog.scrollTop = 0; });
+      }
+      function closeModal() {
+        modal.hidden = true;
+        document.body.classList.remove("news-modal-open");
+        if (lastFocus && lastFocus.focus) lastFocus.focus();
+      }
+
+      grid.addEventListener("click", function (e) {
+        var card = e.target.closest(".news-card");
+        if (!card) return;
+        var n = ITEMS[+card.dataset.idx];
+        if (n) openModal(n);
+      });
+      grid.addEventListener("keydown", function (e) {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        var card = e.target.closest(".news-card");
+        if (!card) return;
+        e.preventDefault();
+        var n = ITEMS[+card.dataset.idx];
+        if (n) openModal(n);
+      });
+      modal.addEventListener("click", function (e) {
+        if (e.target.closest("[data-news-close]")) closeModal();
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && !modal.hidden) closeModal();
+      });
+
+      // ── load ───────────────────────────────────────────────────────────────
       var timeout = new Promise(function (res) { setTimeout(function () { res(null); }, 6000); });
       var fetchP = fetch(ERP_BASE + "/.netlify/functions/store-news", { headers: { "Accept": "application/json" } })
         .then(function (r) { return r.ok ? r.json() : null; })
