@@ -52,6 +52,19 @@
     if (Array.isArray(fp.images) && fp.images.length) m.images = fp.images;
     if (fp.short) m.short = fp.short;
     if (fp.desc) m.desc = fp.desc;
+    // Datasheets/manuals: the ERP feed docs ({src,name,type}) merge onto any curated static
+    // docs ({file,title,type}), deduped by title. Mapped to {url,title,type} so the product
+    // page renders an absolute ERP url (or the local assets/docs/<file> for the static ones).
+    if (Array.isArray(fp.docs) && fp.docs.length) {
+      var docs = Array.isArray(sp.docs) ? sp.docs.slice() : [];
+      var have = {};
+      docs.forEach(function (d) { have[String(d.title || "").toLowerCase()] = true; });
+      fp.docs.forEach(function (d) {
+        var t = String(d.name || "").toLowerCase();
+        if (d.src && !have[t]) { docs.push({ url: d.src, title: d.name || "Document", type: d.type || "" }); have[t] = true; }
+      });
+      m.docs = docs;
+    }
     if (fp.wooId != null) m.wooId = fp.wooId;
     m.fromErp = true;             // provenance flag (handy for debugging / UI badges)
     return m;

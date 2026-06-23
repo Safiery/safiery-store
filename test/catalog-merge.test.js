@@ -74,6 +74,32 @@ test('mergeCatalog: overlays ERP live fields, keeps curated fields + set shape',
   assert.equal(tie.price, 132, '$0 ERP price did NOT clobber the static price');
 });
 
+test('overlay: ERP docs merge onto curated docs, deduped by title, mapped to {url,title,type}', () => {
+  const sp = { id: 'x', wooId: 60981, sku: 'X', docs: [{ file: 'local.pdf', title: 'Local Manual', type: 'manual' }] };
+  const fp = { wooId: 60981, docs: [
+    { src: 'https://hq/d/ds.pdf', name: 'Datasheet', type: 'datasheet' },
+    { src: 'https://hq/d/dup.pdf', name: 'Local Manual', type: 'manual' }   // dup title -> skipped
+  ] };
+  const m = MERGE.overlay(sp, fp);
+  assert.equal(m.docs.length, 2, 'curated doc kept + one new ERP doc (dup title skipped)');
+  assert.equal(m.docs[0].file, 'local.pdf', 'static doc shape untouched, kept first');
+  assert.equal(m.docs[1].title, 'Datasheet');
+  assert.equal(m.docs[1].url, 'https://hq/d/ds.pdf', 'absolute ERP url');
+  assert.equal(m.docs[1].type, 'datasheet');
+});
+
+test('overlay: a product with no static docs gets the ERP docs as {url,title,type}', () => {
+  const m = MERGE.overlay({ id: 'y', wooId: 1 }, { wooId: 1, docs: [{ src: 'https://hq/m.pdf', name: 'Manual', type: 'manual' }] });
+  assert.equal(m.docs.length, 1);
+  assert.equal(m.docs[0].url, 'https://hq/m.pdf');
+  assert.equal(m.docs[0].title, 'Manual');
+});
+
+test('overlay: no feed docs leaves curated docs untouched', () => {
+  const m = MERGE.overlay({ id: 'z', wooId: 2, docs: [{ file: 'a.pdf', title: 'A', type: 'manual' }] }, { wooId: 2, name: 'N' });
+  assert.deepEqual(m.docs, [{ file: 'a.pdf', title: 'A', type: 'manual' }]);
+});
+
 test('mergeCatalog: unmatched + variable products keep their static data', () => {
   const feed = { ok: true, products: [] };   // empty feed
   const out = MERGE.mergeCatalog(staticSet(), feed, LINKS);
