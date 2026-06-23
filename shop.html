@@ -66,7 +66,7 @@
 
   <script src="data/catalog.js"></script>
   <script src="data/catalog-links.js"></script>
-  <script src="assets/js/store.js?v=2"></script>
+  <script src="assets/js/store.js?v=4"></script>
   <script src="assets/js/assistant.js" defer></script>
   <script>
     (function () {
@@ -120,6 +120,7 @@
         updateHeading();
       }
       window.__pageRerender = apply; // keep prices fresh on trade login
+      Store.onCatalog(apply);        // re-render with real ERP photos when the overlay lands
 
       // wire filters
       document.querySelector("[data-cat-filters]").addEventListener("change", function () {

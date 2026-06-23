@@ -230,6 +230,8 @@ window.Store = (function () {
   };
   function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
   function productArt(product) {
+    // A real ERP photo (from the store-catalog overlay) wins over the generated schematic art.
+    if (product && Array.isArray(product.images) && product.images[0] && product.images[0].src) return product.images[0].src;
     var cat = category(product.cats[0]) || { glyph: "accessory", tag: "" };
     var col = CAT_COLOR[product.cats[0]] || "#f6a623";
     var glyph = ICONS[cat.glyph] || ICONS.accessory;
@@ -475,7 +477,51 @@ window.Store = (function () {
       });
   }
 
+  /* ---------------- ERP catalogue overlay ----------------
+   * The HQ store-catalog feed masters per-product photos + docs (and price). We overlay it onto
+   * the static catalog.js IN PLACE (by wooId, falling back to sku), then fire `safiery:catalog`
+   * so any rendered view upgrades from the generated art to the real photos. Fails soft: if the
+   * feed is unreachable / CORS-blocked / cold, the static catalogue stands unchanged. */
+  function applyErpCatalog() {
+    return fetch(ERP_BASE + "/.netlify/functions/store-catalog", { headers: { Accept: "application/json" } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (feed) {
+        if (!feed || !Array.isArray(feed.products)) return false;
+        var byWoo = {}, bySku = {};
+        feed.products.forEach(function (fp) {
+          if (fp.wooId != null) byWoo[String(fp.wooId)] = fp;
+          if (fp.sku) bySku[String(fp.sku).toLowerCase()] = fp;
+        });
+        var n = 0;
+        C.products.forEach(function (p) {
+          var link = LINKS[p.id];
+          var wid = (link && link.wooId) ? String(link.wooId).replace("woo:", "") : null;
+          var fp = (wid && byWoo[wid]) || (p.sku && bySku[String(p.sku).toLowerCase()]) || null;
+          if (!fp) return;
+          var hit = false;
+          if (Array.isArray(fp.images) && fp.images.length) {
+            p.images = fp.images.map(function (im) { return { src: (im && im.src) || "", alt: (im && im.alt) || p.name }; }).filter(function (im) { return im.src; });
+            hit = true;
+          }
+          if (Array.isArray(fp.docs) && fp.docs.length) {
+            var docs = Array.isArray(p.docs) ? p.docs.slice() : [];
+            var have = {}; docs.forEach(function (d) { have[String(d.title || "").toLowerCase()] = true; });
+            fp.docs.forEach(function (d) {
+              var t = String(d.name || "").toLowerCase();
+              if (d.src && !have[t]) { docs.push({ url: d.src, title: d.name || "Document", type: d.type || "" }); have[t] = true; }
+            });
+            p.docs = docs; hit = true;
+          }
+          if (hit) n++;
+        });
+        try { document.dispatchEvent(new Event("safiery:catalog")); } catch (e) {}
+        return n;
+      })
+      .catch(function () { return false; });
+  }
+
   /* ---------------- boot ---------------- */
+  var _erpReady = applyErpCatalog();
   function init() {
     syncTradeMode();
     document.addEventListener("DOMContentLoaded", function () {
@@ -495,6 +541,10 @@ window.Store = (function () {
     cartItems: cartItems, cartCount: cartCount, cartTotals: cartTotals,
     addToCart: addToCart, setQty: setQty, removeFromCart: removeFromCart, clearCart: clearCart,
     checkout: checkout, toast: toast, refreshChrome: refreshChrome,
-    STOCK_LABEL: STOCK_LABEL
+    STOCK_LABEL: STOCK_LABEL,
+    // ERP overlay: `ready` resolves when the store-catalog feed has been merged (or failed soft);
+    // `onCatalog(cb)` runs cb now-and-on-update so a view upgrades to real photos when the feed lands.
+    ready: _erpReady,
+    onCatalog: function (cb) { document.addEventListener("safiery:catalog", cb); }
   };
 })();

@@ -183,7 +183,7 @@
 
   <script src="data/catalog.js"></script>
   <script src="data/catalog-links.js"></script>
-  <script src="assets/js/store.js?v=3"></script>
+  <script src="assets/js/store.js?v=4"></script>
   <script src="assets/js/assistant.js" defer></script>
   <script>
     (function () {
@@ -310,7 +310,10 @@
       }
 
       var grid = document.querySelector("[data-featured]");
-      if (grid) { grid._list = Store.featured(); Store.renderGrid(grid, grid._list); }
+      if (grid) {
+        grid._list = Store.featured(); Store.renderGrid(grid, grid._list);
+        Store.onCatalog(function () { grid._list = Store.featured(); Store.renderGrid(grid, grid._list); }); // real ERP photos when overlay lands
+      }
     })();
 
     // ---- dot nav + separator reveal ----
